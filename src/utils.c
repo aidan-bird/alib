@@ -9,6 +9,8 @@
 
 #define BLOCKSIZE 1024
 
+Array *readFileHelper(FILE *fp, int *outSize);
+
 void
 intSwap(int *restrict x, int *restrict y)
 {
@@ -41,44 +43,40 @@ readTextFile(FILE *fp, int *outLength)
     char buf[BLOCKSIZE];
     char *ret;
     Array *arr;
-    void *vp;
-    int isNotEOF;
     int len;
 
-    arr = newArray(1, 1, sizeof(buf));
-    if (!arr)
+    if (!(arr = readFileHelper(fp, NULL)))
         goto error1;
-
-    isNotEOF = 1;
-    do {
-        tmp = fread(buf, 1, BLOCKSIZE, fp);
-        if (tmp != sizeof(buf)) {
-            buf[tmp] = '\0';
-            isNotEOF = 0;
-        }
-        vp = pushArray(arr, buf);
-        if (!vp)
-            goto error2;
-        arr = vp;
-    } while(isNotEOF);
     len = arrayToString(arr, &ret);
-    if (len < 0)
-        goto error3;
     if (outLength)
         *outLength = len;
     return ret;
-error3:;
-    /* XXX */ 
-    free(arr);
-    return NULL;
-error2:;
-    deleteArray(arr);
 error1:;
     return NULL;
 }
 
+/* XXX experimental */
+const void *
+readBinFile(FILE *fp, int *outLength)
+{
+    size_t tmp;
+    char buf[BLOCKSIZE];
+    Array *ret;
+    int len;
+
+    if (!(ret = readFileHelper(fp, &len)))
+        goto error1;
+    arrayToRaw(ret, len);
+    if (outLength)
+        *outLength = len;
+    return ret;
+error1:;
+    return NULL;
+}
+
+/* XXX experimental */
 Array *
-readFileHelper(FILE *fp)
+readFileHelper(FILE *fp, int *outSize)
 {
     int isNotEOF;
     int nextReadSize;
@@ -97,29 +95,11 @@ readFileHelper(FILE *fp)
         if (!tryPushArray(&ret, buf))
             goto error2;
     } while(isNotEOF);
+    if (outSize)
+        *outSize = (ret->count - 1) * ret->elementSize + nextReadSize;
     return ret;
 error2:;
     deleteArray(ret);
-error1:;
-    return NULL;
-}
-
-/* XXX experimental */
-const void *
-readBinFile(FILE *fp, int *outLength)
-{
-    size_t tmp;
-    char buf[BLOCKSIZE];
-    char *ret;
-    Array *arr;
-    int len;
-
-    if (!(arr = readFileHelper(fp)))
-        goto error1;
-    len = arrayToString(arr, &ret);
-    if (outLength)
-        *outLength = len;
-    return ret;
 error1:;
     return NULL;
 }
