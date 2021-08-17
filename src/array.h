@@ -9,6 +9,7 @@
  */ 
 
 #include <stddef.h>
+#include <stdint.h>
 
 typedef struct Array Array;
 typedef Array * (*ArrayRelocateFunc)();
