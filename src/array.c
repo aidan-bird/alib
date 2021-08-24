@@ -3,6 +3,7 @@
 
 #include <stdlib.h>
 #include <string.h>
+#include <stdint.h>
 
 #include "array.h"
 
@@ -19,6 +20,7 @@ Array *
 newArray(int blockSize, int capacity, size_t elementSize)
 {
     Array *ret;
+    size_t vectorSize;
 
     /* 
      * the actual array starts right after 
@@ -26,13 +28,14 @@ newArray(int blockSize, int capacity, size_t elementSize)
      */
     capacity = capacity < 0 ? DEFAULT_CAPACITY : capacity;
     blockSize = blockSize <= 0 ? DEFAULT_BLOCK_SIZE : blockSize;
-    if (!(ret = malloc(sizeof(Array) + elementSize * capacity)))
+    vectorSize = sizeof(Array) + elementSize * capacity;
+    if (!(ret = malloc(vectorSize)))
         return NULL;
     ret->count = 0;
     ret->capacity = capacity;
     ret->blockSize = blockSize;
     ret->elementSize = elementSize;
-    ret->first = (void *)ret + sizeof(Array);
+    ret->first = (uint8_t *)ret + sizeof(Array);
     return ret;
 }
 
@@ -52,7 +55,7 @@ expandArray(Array *array, size_t blockCount)
         + array->blockSize * blockCount));
     if (!ret)
         return NULL;
-    ret->first = (void *)ret + sizeof(Array);
+    ret->first = (uint8_t *)ret + sizeof(Array);
     ret->capacity += ret->blockSize * blockCount;
     return ret;
 }
@@ -61,7 +64,7 @@ expandArray(Array *array, size_t blockCount)
 Array *
 tryPushArray(Array **array, const void *element)
 {
-    void *tmp;
+    Array *tmp;
 
     if (!(tmp = insertArray(*array, element, (*array)->count)))
         return NULL;
@@ -153,7 +156,7 @@ arrayToString(Array *array, char **outStr)
     // if (!(tmp = realloc(tmp, len + 1)))
     //     ret = -1;
     // *outStr = tmp;
-    *outStr = array;
+    *outStr = (char *)array;
     return ret;
 }
 
@@ -167,13 +170,13 @@ Array *
 cloneArray(Array *array)
 {
     Array *ret;
-    size_t size;
+    size_t vectorSize;
 
-    size = sizeof(Array) + array->elementSize * array->count;
-    if (!(ret = malloc(size)))
+    vectorSize = sizeof(Array) + array->elementSize * array->count;
+    if (!(ret = malloc(vectorSize)))
         return NULL;
-    memcpy(ret, array, size);
-    ret->first = (void *)ret + sizeof(Array);
+    memcpy(ret, array, vectorSize);
+    ret->first = (uint8_t *)ret + sizeof(Array);
     ret->capacity = ret->count;
     return ret;
 }
@@ -215,8 +218,8 @@ removeRangeArray(Array *array, void *outElements, const size_t *range,
     qsort(r, n, sizeof(size_t), sortCmpFunc);
     /* copy deleted elements to outElements */ 
     if (outElements) {
-        for (int k = 0; k < n; k++) {
-            memcpy(outElements + array->elementSize * k, 
+        for (size_t k = 0; k < n; k++) {
+            memcpy((uint8_t *)outElements + array->elementSize * k, 
                 getElementArray(array, r[k]), array->elementSize);
         }
     }
@@ -245,7 +248,7 @@ removeRangeArray(Array *array, void *outElements, const size_t *range,
 int
 searchArray(Array *array, const void *element)
 {
-    for (int i = 0; i < array->count; i++) {
+    for (size_t i = 0; i < array->count; i++) {
         if (!memcmp(getElementArray(array, i), element, array->elementSize))
             return i;
     }
@@ -337,7 +340,7 @@ forwardShiftRangeArray(Array *array, size_t index, size_t n)
         return NULL;
     if (index < array->count) {
         start = getElementArray(array, index);
-        memmove(start + n * array->elementSize, start, (array->count - index) 
+        memmove((uint8_t *)start + n * array->elementSize, start, (array->count - index) 
             * array->elementSize);
     }
     array->count += n;

@@ -108,12 +108,12 @@ error1:;
  * converts a string of integers to an array of integers
  */
 Array *
-stringToIntArray(const char *str)
+stringToIntArray(char *str)
 {
     Array *ret;
     int nextInt;
-    const char *tmp1;
-    const char *tmp2;
+    char *tmp1;
+    char *tmp2;
 
     if (!(ret = newArray(-1, -1, sizeof(int))))
         goto error1;

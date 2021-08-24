@@ -1,5 +1,5 @@
-#ifndef UTILS_H
-#define UTILS_H
+#ifndef ALIB_UTILS_H
+#define ALIB_UTILS_H
 
 /* 
  * Aidan Bird 2021
@@ -38,7 +38,7 @@
 const char *readTextFile(FILE *fp, int *outLength);
 const void *readBinFile(FILE *fp, int *outLength);
 void die(const char *msg);
-Array *stringToIntArray(const char *str);
+Array *stringToIntArray(char *str);
 void intSwap(int *restrict x, int *restrict y);
 
 #endif
