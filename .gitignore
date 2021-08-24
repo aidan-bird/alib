@@ -1,0 +1,6 @@
+makefile
+src/testing.c
+.obj
+.obj/*
+testing
+.gdb_history
