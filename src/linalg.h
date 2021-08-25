@@ -66,7 +66,6 @@ int PREFIX##MatrixCpy(PREFIX##Matrix *restrict dest, \
     const PREFIX##Matrix *restrict src); \
 PREFIX##Matrix * PREFIX##MatrixMultSimple(const PREFIX##Matrix *a,\
     const PREFIX##Matrix *b); \
-void PREFIX##MatrixSwapRows(PREFIX##Matrix *a, size_t dest, size_t src); \
 struct PREFIX##Matrix \
 { \
     size_t n; \
@@ -291,7 +290,7 @@ PREFIX##MatrixCopyUpperTriangle(PREFIX##Matrix *dest, \
  * dest
  *
  * EFFECTS
- * using matlab notation: computes dest(destrow, :) - src(srcrow, :) and stores the result at
+ * using octave notation: computes dest(destrow, :) - src(srcrow, :) and stores the result at
  * dest(destrow, :).
  * returns non-zero on error i.e., dest and src dimensions do not match.
  */ \
@@ -413,6 +412,17 @@ PREFIX##MatrixZeroUpperTriangle(PREFIX##Matrix *a) \
 /* call DEF_MATRIX_BASE first */
 /* it does not make sense to use this on non-real types */
 #define DEF_MATRIX_EXT(T, PREFIX, PRINTF_STR, ZERO, ONE, ABS_FUNC) \
+PREFIX##Matrix *PREFIX##MatrixLUSolve(const PREFIX##Matrix *restrict b, \
+    const PREFIX##Matrix *restrict l, const PREFIX##Matrix *restrict u, \
+    const PREFIX##PermutationMatrix *restrict perm); \
+void PREFIX##MatrixSwapRows(PREFIX##Matrix *a, size_t dest, size_t src); \
+PREFIX##Matrix *PREFIX##MatrixFwdSub(const PREFIX##Matrix *restrict a, \
+    const PREFIX##Matrix *restrict b); \
+PREFIX##Matrix *PREFIX##MatrixBackSub(const PREFIX##Matrix *restrict a, \
+    const PREFIX##Matrix *restrict b); \
+int PREFIX##MatrixLUFactorize(const PREFIX##Matrix *restrict a, \
+    PREFIX##Matrix *restrict l, PREFIX##Matrix *restrict u, \
+    PREFIX##PermutationMatrix *restrict perm); \
 \
 /*
  * REQUIRES
@@ -468,5 +478,141 @@ PREFIX##MatrixLUFactorize(const PREFIX##Matrix *restrict a, \
     PREFIX##MatrixZeroUpperTriangle(l); \
     PREFIX##MatrixSetDiag(l, 1.0f); \
     return 0; \
+} \
+/*
+ * REQUIRES
+ * a is a square matrix.
+ * a is a lower triangle matrix.
+ * b is a column matrix.
+ * only one solution exists.
+ *
+ * MODIFIES
+ * none
+ *
+ * EFFECTS
+ * solves ax = b using forward substitution
+ * returns the result of x.
+ * returns NULL on error.
+ */ \
+PREFIX##Matrix * \
+PREFIX##MatrixFwdSub(const PREFIX##Matrix *restrict a, \
+    const PREFIX##Matrix *restrict b) \
+{ \
+    PREFIX##Matrix *ret; \
+    T sum; \
+ \
+    /* a must be square */ \
+    ret = PREFIX##MatrixDup(b); \
+    if (!ret) \
+        goto error1; \
+    for (size_t i = 0; i < a->n; i++) { \
+        sum = 0; \
+        for (size_t j = 0; j < i; j++) \
+            sum += linalg_get_matrix_element(a, i, j) \
+                * linalg_get_matrix_element(ret, j, 0); \
+        linalg_get_matrix_element(ret, i, 0) = \
+            (linalg_get_matrix_element(b, i, 0) - sum) \
+            / linalg_get_matrix_element(a, i, i); \
+    } \
+    return ret; \
+error1:; \
+    return NULL; \
+} \
+/*
+ * REQUIRES
+ * a is a square matrix.
+ * a is a upper triangle matrix.
+ * b is a column matrix.
+ * only one solution exists.
+ *
+ * MODIFIES
+ * none
+ *
+ * EFFECTS
+ * solves ax = b using back substitution
+ * returns the result of x.
+ * returns NULL on error.
+ */ \
+PREFIX##Matrix * \
+PREFIX##MatrixBackSub(const PREFIX##Matrix *restrict a, \
+    const PREFIX##Matrix *restrict b) \
+{ \
+    PREFIX##Matrix *ret; \
+    T sum; \
+    size_t k; \
+ \
+    /* a must be square */ \
+    ret = PREFIX##MatrixDup(b); \
+    if (!ret) \
+        goto error1; \
+    for (size_t i = 0; i < a->n; i++) { \
+        k = a->n - i - 1; \
+        sum = 0; \
+        for (size_t j = k + 1; j < a->n; j++) \
+            sum += linalg_get_matrix_element(a, k, j) * \
+                linalg_get_matrix_element(ret, j, 0); \
+        linalg_get_matrix_element(ret, k, 0) = \
+            (linalg_get_matrix_element(b, k, 0) - sum) \
+            / linalg_get_matrix_element(a, k, k); \
+    } \
+    return ret; \
+error1:; \
+    return NULL; \
+} \
+/*
+ * REQUIRES
+ * l, u, and perm corospond to the LU factorization of a.
+ * b is a column matrix.
+ * only one solution exists
+ *
+ * MODIFIES
+ *
+ * EFFECTS
+ * solves ax = b given b, the LU factorization of a, and the permutation matrix
+ * returns the result of x.
+ * returns NULL on error.
+ */ \
+PREFIX##Matrix * \
+PREFIX##MatrixLUSolve(const PREFIX##Matrix *restrict b, \
+    const PREFIX##Matrix *restrict l, const PREFIX##Matrix *restrict u, \
+    const PREFIX##PermutationMatrix *restrict perm) \
+{ \
+    PREFIX##Matrix *fperm; \
+    PREFIX##Matrix *tmp; \
+    PREFIX##Matrix *d; \
+    PREFIX##Matrix *ret; \
+ \
+    /* 
+     * computation outline using octave notation
+     * d = l \ (perm * b)
+     * x = u \ d
+     */ \
+    fperm = new##PREFIX##Matrix(perm->n, perm->m); \
+    if (!fperm) \
+        goto error1; \
+    for (size_t i = 0; i < linalg_get_matrix_element_count(perm); i++) \
+        fperm->start[i] = perm->start[i]; \
+    tmp = PREFIX##MatrixMultSimple(fperm, b); \
+    if (!tmp) \
+        goto error2; \
+    d = PREFIX##MatrixFwdSub(l, tmp); \
+    if (!d) \
+        goto error3; \
+    ret = PREFIX##MatrixBackSub(u, d); \
+    if (!ret) \
+        goto error4; \
+    free(fperm); \
+    free(tmp); \
+    free(d); \
+    return ret; \
+error4:; \
+    free(d); \
+error3:; \
+    free(tmp); \
+error2:; \
+    free(fperm); \
+error1:; \
+    return NULL; \
 }
+
 #endif
