@@ -39,11 +39,34 @@
 
 #define DEF_MATRIX(T, PREFIX, PRINTF_STR, ZERO, ONE) \
     DEF_MATRIX_BASE(T, PREFIX, PRINTF_STR, ZERO, ONE) \
+
+#define DEF_MATRIX_REAL(T, PREFIX, PRINTF_STR, ZERO, ONE, ABS_FUNC) \
+    DEF_MATRIX_BASE(T, PREFIX, PRINTF_STR, ZERO, ONE) \
     DEF_MATRIX_BASE(uint8_t, PREFIX##Permutation, "%d ", 0, 1) \
-    DEF_MATRIX_EXT(T, PREFIX, PRINTF_STR, ZERO, ONE)
+    DEF_MATRIX_EXT(T, PREFIX, PRINTF_STR, ZERO, ONE, ABS_FUNC)
 
 #define DEF_MATRIX_BASE(T, PREFIX, PRINTF_STR, ZERO, ONE) \
 typedef struct PREFIX##Matrix PREFIX##Matrix; \
+PREFIX##Matrix * \
+new##PREFIX##Matrix(size_t n, size_t m); \
+void PREFIX##MatrixTranspose(PREFIX##Matrix *mat); \
+PREFIX##Matrix *PREFIX##MatrixDup(const PREFIX##Matrix *mat); \
+void PREFIX##MatrixOnes(PREFIX##Matrix *mat); \
+void PREFIX##MatrixZeros(PREFIX##Matrix *mat); \
+int PREFIX##MatrixEye(PREFIX##Matrix *mat); \
+void PREFIX##MatrixSetDiag(PREFIX##Matrix *mat, T x); \
+void PREFIX##MatrixPrint(const PREFIX##Matrix *mat); \
+void PREFIX##MatrixZeroLowerTriangle(PREFIX##Matrix *a); \
+void PREFIX##MatrixZeroUpperTriangle(PREFIX##Matrix *a); \
+int PREFIX##MatrixCopyUpperTriangle(PREFIX##Matrix *dest, \
+    const PREFIX##Matrix *restrict src); \
+int PREFIX##MatrixSubRow(PREFIX##Matrix *dest, const PREFIX##Matrix *src, \
+    size_t destrow, size_t srcrow, float rowscale); \
+int PREFIX##MatrixCpy(PREFIX##Matrix *restrict dest, \
+    const PREFIX##Matrix *restrict src); \
+PREFIX##Matrix * PREFIX##MatrixMultSimple(const PREFIX##Matrix *a,\
+    const PREFIX##Matrix *b); \
+void PREFIX##MatrixSwapRows(PREFIX##Matrix *a, size_t dest, size_t src); \
 struct PREFIX##Matrix \
 { \
     size_t n; \
@@ -173,9 +196,25 @@ PREFIX##MatrixEye(PREFIX##Matrix *mat) \
     if (!linalg_is_matrix_square(mat)) \
         return -1; \
     PREFIX##MatrixZeros(mat); \
-    for (size_t i = 0; i < mat->n; i++) \
-        linalg_get_matrix_element(mat, i, i) = (ONE); \
+    PREFIX##MatrixSetDiag(mat, ONE); \
     return 0; \
+} \
+\
+/*
+ * REQUIRES
+ * mat is valid
+ *
+ * MODIFIES
+ * mat
+ *
+ * EFFECTS
+ * sets all elements along the diagonal of mat to x.
+ */ \
+void \
+PREFIX##MatrixSetDiag(PREFIX##Matrix *mat, T x) \
+{ \
+    for (size_t i = 0; i < MIN(mat->n, mat->m); i++) \
+        linalg_get_matrix_element(mat, i, i) = x; \
 } \
  \
 /*
@@ -335,14 +374,47 @@ PREFIX##MatrixMultSimple(const PREFIX##Matrix *a, const PREFIX##Matrix *b) \
         } \
     } \
     return ret; \
+} \
+/*
+ * REQUIRES
+ * a is valid
+ * dest and src corospond to rows in a 
+ *
+ * MODIFIES
+ * a
+ *
+ * EFFECTS
+ * swaps row dest with row src
+ */ \
+void \
+PREFIX##MatrixSwapRows(PREFIX##Matrix *a, size_t dest, size_t src) \
+{ \
+    T tmp[a->m]; \
+    \
+    if (dest == src) \
+        return; \
+ \
+    memcpy(tmp, linalg_addr_of_matrix_element(a, src, 0), sizeof(tmp)); \
+    memcpy(linalg_addr_of_matrix_element(a, src, 0), \
+        linalg_addr_of_matrix_element(a, dest, 0), sizeof(tmp)); \
+    memcpy(linalg_addr_of_matrix_element(a, dest, 0), tmp, sizeof(tmp)); \
+} \
+void \
+PREFIX##MatrixZeroUpperTriangle(PREFIX##Matrix *a) \
+{ \
+    for (size_t i = 0; i < a->n; i++) { \
+        for (size_t j = i + 1; j < a->m; j++) { \
+            linalg_get_matrix_element(a, i, j) = ZERO; \
+        } \
+    } \
 }
 
+
 /* call DEF_MATRIX_BASE first */
-#define DEF_MATRIX_EXT(T, PREFIX, PRINTF_STR, ZERO, ONE) \
+/* it does not make sense to use this on non-real types */
+#define DEF_MATRIX_EXT(T, PREFIX, PRINTF_STR, ZERO, ONE, ABS_FUNC) \
 \
 /*
- * XXX DOES NOT WORK YET
- *
  * REQUIRES
  * a is a square matrix
  * all parameters are valid
@@ -360,15 +432,31 @@ PREFIX##MatrixMultSimple(const PREFIX##Matrix *a, const PREFIX##Matrix *b) \
 int \
 PREFIX##MatrixLUFactorize(const PREFIX##Matrix *restrict a, \
     PREFIX##Matrix *restrict l, PREFIX##Matrix *restrict u, \
-        PREFIX##PermutationMatrix *restrict perm) \
+    PREFIX##PermutationMatrix *restrict perm) \
 { \
     T rowScale; \
- \
+    T maxPivot; \
+    size_t maxPivotRow; \
+\
     if (!linalg_dims_eq(a, l) || !linalg_dims_eq(a, u)) \
         return -1; \
-    PREFIX##MatrixEye(l); \
     PREFIX##MatrixCpy(u, a); \
+    PREFIX##PermutationMatrixEye(perm); \
     for (size_t i = 0; i < a->n - 1; i++) { \
+        /* pivot */ \
+        maxPivot = ABS_FUNC(linalg_get_matrix_element(u, i, i)); \
+        maxPivotRow = i; \
+        for (size_t j = i + 1; j < a->n; j++) { \
+            if (ABS_FUNC(linalg_get_matrix_element(u, j, i)) > maxPivot) { \
+                maxPivot = ABS_FUNC(linalg_get_matrix_element(u, j, i)); \
+                maxPivotRow = j; \
+            } \
+        } \
+        if (maxPivotRow != i) { \
+            PREFIX##MatrixSwapRows(u, i, maxPivotRow); \
+            PREFIX##MatrixSwapRows(l, i, maxPivotRow); \
+            PREFIX##PermutationMatrixSwapRows(perm, i, maxPivotRow); \
+        } \
         for (size_t j = i + 1; j < a->n; j++) { \
             rowScale = linalg_get_matrix_element(u, j, i) \
                 / linalg_get_matrix_element(u, i, i); \
@@ -377,7 +465,8 @@ PREFIX##MatrixLUFactorize(const PREFIX##Matrix *restrict a, \
         } \
     } \
     PREFIX##MatrixZeroLowerTriangle(u); \
+    PREFIX##MatrixZeroUpperTriangle(l); \
+    PREFIX##MatrixSetDiag(l, 1.0f); \
     return 0; \
 }
-
 #endif
