@@ -3,6 +3,8 @@
 #include <stddef.h>
 #include <stdlib.h>
 #include <errno.h>
+#include <string.h>
+#include <ctype.h>
 
 #include "utils.h"
 #include "array.h"
@@ -133,3 +135,55 @@ error1:;
     return NULL;
 }
 
+/* 
+ * create a new vector of n bytes copied from src.
+ * returns NULL on error.
+ */
+void *
+memdup(const void *src, size_t n)
+{
+    void *ret;
+
+    if (!(ret = malloc(n)))
+        goto error1;
+    memcpy(ret, src, n);
+    return ret;
+error1:;
+    return NULL;
+}
+
+/*
+ * count the number of occurrences of b in the first n bytes of src.
+ */
+size_t
+charCount(const void *src, size_t n, char b)
+{
+    size_t ret;
+
+    ret = 0;
+    for (size_t i = 0; i < n; i++) {
+        if (((const char *)src)[i] == b)
+            ret++;
+    }
+    return ret;
+}
+
+/*
+ * print byte arrays
+ */
+void
+printBinary(const void *src, size_t n)
+{
+    int c;
+
+    for (size_t i = 0; i < n; i++) {
+        c = ((const char *)src)[i];
+        if (isprint(c) || isspace(c)) {
+            putchar(c);
+        } else {
+            printf("\\%x", (unsigned int)c);
+            // putchar('.');
+        }
+    }
+    putchar('\n');
+}

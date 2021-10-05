@@ -204,3 +204,10 @@ clearVLArray(VLArray *arr)
     clearArray(arr->sizes);
 }
 
+
+void
+printVLArray(const VLArray *arr)
+{
+    for (size_t i = 0; i < getCountVLArray(arr); i++)
+        printBinary(getElementVLArray(arr, i), sizeOfElementVLArray(arr, i));
+}

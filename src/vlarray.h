@@ -33,12 +33,11 @@ VLArray *newVLArray(int blockSize, int capacity, int frameSize);
 void deleteVLArray(VLArray *arr);
 VLArray *pushVLArray(VLArray *arr, void *nextElement, size_t elementSize);
 int removeAtVLArray(VLArray *arr, void *outElement, size_t index);
-
 int popVLArray(VLArray *arr, void *outElement);
-
 void clearVLArray(VLArray *VLArray);
 VLArray *insertVLArray(VLArray *arr, void *nextElement, size_t elementSize,
     size_t index);
+void printVLArray(const VLArray *arr);
 
 /*
  * VLARRAY DETAILS AND FIELDS

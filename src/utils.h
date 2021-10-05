@@ -40,5 +40,8 @@ const void *readBinFile(FILE *fp, int *outLength);
 void die(const char *msg);
 Array *stringToIntArray(char *str);
 void intSwap(int *restrict x, int *restrict y);
+void *memdup(const void *src, size_t n);
+size_t charCount(const void *src, size_t n, char b);
+void printBinary(const void *src, size_t n);
 
 #endif
