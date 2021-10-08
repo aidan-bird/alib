@@ -6,7 +6,19 @@
 #include "./utils.h"
 
 /*
- * 
+ * REQUIRES
+ * csvtext is not null
+ * n is valid
+ *
+ * MODIFIES
+ * none
+ *
+ * EFFECTS
+ * interprets csvtext as a list n bytes long and with elements separated by 
+ * commas.
+ * returns a VLArray with all the elements (not including the commas).
+ * each element in the VLArray is null terminated.
+ * returns NULL on error.
  */
 VLArray *
 newCSVRaw(const void *csvtext, size_t n)

@@ -18,15 +18,15 @@ void deleteArray(Array *array);
 void clearArray(Array *array);
 int removeAtArray(Array *array, void *outElement, size_t index);
 int popArray(Array *array, void *outElement);
-int arrayToString(Array *array, char **outStr);
+size_t arrayToString(Array *array, char **outStr);
 void arrayToRaw(Array *array, size_t n);
-int containsIndexArray(Array *array, size_t index);
+int containsIndexArray(const Array *array, size_t index);
 int removeRangeArray(Array *array, void *outElements, const size_t *range,
     size_t n);
-int searchArray(Array *array, const void *element);
+int searchArray(const Array *array, const void *restrict element);
 int removeContinuousRangeArray(Array *array, void *outElements, size_t index,
     size_t n);
-Array *cloneArray(Array *array);
+Array *cloneArray(const Array *array);
 Array *expandArray(Array *array, size_t blockCount);
 Array *newArray(int blockSize, int capacity, size_t elementSize);
 Array *pushArray(Array *array, const void *element);

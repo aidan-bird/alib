@@ -9,37 +9,69 @@
 
 #include "./utils.h"
 
+/* 
+ * aidan bird 2021 
+ *
+ * This file does:
+ * - Generic matrix structs
+ * - Matrix operations
+ * - LU Factorization
+ * - Solving linear systems
+ *
+ * Usage:
+ * DEF_MATRIX(type, name prefix, printf format, zero type, one type) \
+ * DEF_MATRIX_REAL is for float and double types.
+ */
+
 #define xstr(s) str(s)
 #define str(s) #s
 
+/* returns non-zero if the dimensions of A are the same as the dimensions of B */
 #define linalg_dims_eq(A_PTR, B_PTR) \
     ((A_PTR) == (B_PTR) || ((A_PTR)->n == (B_PTR)->n && (A_PTR)->m == (B_PTR)->m))
 
+/* returns the address (void*) of an element */
 #define linalg_addr_of_matrix_element(MATRIX_PTR, ROW, COL) \
     (void *)((MATRIX_PTR)->start + (ROW) * (MATRIX_PTR)->m + (COL))
 
+/* return the element at row and col  */
 #define linalg_get_matrix_element(MATRIX_PTR, ROW, COL) \
     (MATRIX_PTR)->start[(ROW) * (MATRIX_PTR)->m + (COL)]
 
+/* 
+ * get the total number of elements in a matrix. 
+ * this returns n*m
+ */
 #define linalg_get_matrix_element_count(MATRIX_PTR) \
-    (MATRIX_PTR)->n * (MATRIX_PTR)->m \
+    ((MATRIX_PTR)->n * (MATRIX_PTR)->m) \
 
+/* 
+ * get the sizeof all the matrix elements.
+ * T is the matrix's element type
+ */
 #define linalg_sizeof_matrix(MATRIX_PTR, T) \
-    sizeof(T) * linalg_get_matrix_element_count(MATRIX_PTR) \
+    (size_t)(sizeof(T) * linalg_get_matrix_element_count(MATRIX_PTR)) \
 
-#define linalg_sizeof_matrix_total(MATRIX_PTR) \
-    (sizeof(MATRIX) + linalg_sizeof_matrix(MATRIX_PTR)) \
+/* 
+ * get the sizeof all the matrix elements + the sizeof the matrix struct itself.
+ * T is the matrix's element type
+ */
+#define linalg_sizeof_matrix_total(MATRIX_PTR, T) \
+    (sizeof(*MATRIX_PTR) + linalg_sizeof_matrix(MATRIX_PTR , T)) \
 
+/* returns non-zero if the matrix is square */
 #define linalg_is_matrix_square(MATRIX_PTR) \
     ((MATRIX_PTR)->n == (MATRIX_PTR)->m)
 
-/* can a contain b? */
+/* returns non-zero if A can contain B */
 #define linalg_can_contain(A_PTR, B_PTR) \
     ((A_PTR)->n >= (B_PTR)->n && (A_PTR)->m >= (B_PTR)->m)
 
+/* used for defining a new matrix type */
 #define DEF_MATRIX(T, PREFIX, PRINTF_STR, ZERO, ONE) \
     DEF_MATRIX_BASE(T, PREFIX, PRINTF_STR, ZERO, ONE) \
 
+/* used for defining a floating point typed matrix */
 #define DEF_MATRIX_REAL(T, PREFIX, PRINTF_STR, ZERO, ONE, ABS_FUNC) \
     DEF_MATRIX_BASE(T, PREFIX, PRINTF_STR, ZERO, ONE) \
     DEF_MATRIX_BASE(uint8_t, PREFIX##Permutation, "%d ", 0, 1) \
@@ -407,7 +439,6 @@ PREFIX##MatrixZeroUpperTriangle(PREFIX##Matrix *a) \
         } \
     } \
 }
-
 
 /* call DEF_MATRIX_BASE first */
 /* it does not make sense to use this on non-real types */

@@ -1,5 +1,5 @@
 /* Aidan Bird 2021 */ 
-#define _POSIX_C_SOURCE 200809L
+// #define _POSIX_C_SOURCE 200809L
 
 #include <stdlib.h>
 #include <string.h>
@@ -9,13 +9,32 @@
 
 #define DEFAULT_CAPACITY 32
 #define DEFAULT_BLOCK_SIZE 32
+#define MAXWORD uint64_t
 
 /*
- * Array constructor
+ * REQUIRES
+ * none
+ *
+ * MODIFIES
+ * none
+ *
+ * EFFECTS
+ * Constructs a new array.
+ *
+ * blockSize = the number of elements that will be added to the capacity when 
+ * the array is resized.
+ *
+ * elementSize = the actual size of each element in bytes.
+ *
+ * capacity = the number of elements that can be added before the array is 
+ * automatically resized.
+ *
  * if capacity < 0, then the default capacity is used
  * if blockSize < 0, then the default blockSize is used
  * if blockSize = 0, then the array cannot be resized.
- */ 
+ *
+ * returns null on error.
+ */
 Array *
 newArray(int blockSize, int capacity, size_t elementSize)
 {
@@ -40,9 +59,19 @@ newArray(int blockSize, int capacity, size_t elementSize)
 }
 
 /*
- * Increase the capacity of an Array object by (Array.blockSize * blockCount).
+ * REQUIRES
+ * array is valid
+ *
+ * MODIFIES
+ * array
+ *
+ * EFFECTS
+ * Increase the capacity of an Array by (Array.blockSize * blockCount).
+ * On success, this returns a pointer to the resized array. This value may 
+ * differ from the array point argument, so the array pointer argument is not
+ * valid after a successful call to this function.
  * Returns NULL on error.
- */ 
+ */
 Array *
 expandArray(Array *array, size_t blockCount)
 {
@@ -73,13 +102,22 @@ tryPushArray(Array **array, const void *element)
 }
 
 /*
- * Append an element to an Array object. If there is not enough space for 
- * the next element, 
- * Returns NULL if the element cannot be appended.
+ * REQUIRES
+ * array is valid
+ * element is valid
  *
- * pushing elements takes O(1) if there is enough capacity.
- * takes O(n) time otherwise.
- */ 
+ * MODIFIES
+ * array
+ *
+ * EFFECTS
+ * Append an element to an Array object. 
+ * The array may be automatically resized.
+ * Pushing elements takes O(1) if there is enough capacity.
+ * Pushing takes O(n) time otherwise.
+ * Returns NULL on error.
+ * See expandArray() for details about how the return value should be 
+ * handled.
+ */
 Array *
 pushArray(Array *array, const void *element)
 {
@@ -87,12 +125,21 @@ pushArray(Array *array, const void *element)
 }
 
 /*
- * Remove element at a specified index.
- * If outElement is not NULL, the removed element will be copied to outElement.
+ * REQUIRES
+ * array is valid
+ * index is valid
  *
+ * MODIFIES
+ * array
+ * outElement
+ *
+ * EFFECTS
+ * Remove the element at a specified index.
+ * If outElement is not NULL, the removed element will be copied to outElement.
  * takes O(1) time if index = array.count - 1 i.e., pop operation.
  * takes O(n) time otherwise.
- */ 
+ * returns non-zero on error
+ */
 int 
 removeAtArray(Array *array, void *outElement, size_t index)
 {
@@ -100,11 +147,19 @@ removeAtArray(Array *array, void *outElement, size_t index)
 }
 
 /*
- * remove the last element from the array
- * If outElement is not NULL, the removed element will be copied to outElement.
+ * REQUIRES
+ * array is valid
  *
+ * MODIFIES
+ * array
+ * outElement
+ *
+ * EFFECTS
+ * remove the last element from the array.
+ * If outElement is not NULL, the removed element will be copied to outElement.
  * takes O(1) time
- */ 
+ * returns non-zero on error
+ */
 int
 popArray(Array *array, void *outElement)
 {
@@ -112,8 +167,17 @@ popArray(Array *array, void *outElement)
 }
 
 /*
+ * REQUIRES
+ * array is valid
+ *
+ * MODIFIES
+ * array
+ *
+ * EFFECTS
  * remove all elements from the array
- */ 
+ * this does not change the array capacity.
+ * takes O(1) time
+ */
 void
 clearArray(Array *array)
 {
@@ -121,8 +185,15 @@ clearArray(Array *array)
 }
 
 /*
- * Array destructor
- */ 
+ * REQUIRES
+ * array is valid
+ *
+ * MODIFIES
+ * array
+ *
+ * EFFECTS
+ * frees array
+ */
 void
 deleteArray(Array *array)
 {
@@ -130,44 +201,49 @@ deleteArray(Array *array)
 }
 
 /*
+ * REQUIRES
+ * array is valid
+ *
+ * MODIFIES
+ * outStr
+ *
+ * EFFECTS
  * Interprets the array contents as a null-terminated string.
+ * The array must contain a null terminator.
  * Converts the array into a null-terminated string and returns the length of 
  *  the string.
  * Sets the outStr pointer to point to the string.
- *
- * Returns a negative number if realloc fails to shrink the outStr; 
- *  the array struct will be clobbered
- *
+ * The array pointer argument and the array itself is not valid after the 
+ * function ends.
  * takes O(n) time
- */ 
-int
+ */
+size_t
 arrayToString(Array *array, char **outStr)
 {
-    // void *tmp;
-    size_t len;
-    int ret;
+    size_t ret;
 
-    /* XXX use strlen */ 
-    len = strnlen(array->first, sizeofArray(array) - 1);
-    ret = len;
-    memmove(array, array->first, len);
-    ((char *)array)[len] = '\0';
-    // tmp = array;
-    // if (!(tmp = realloc(tmp, len + 1)))
-    //     ret = -1;
-    // *outStr = tmp;
-    *outStr = (char *)array;
+    ret = strlen(array->first);
+    memmove(array, array->first, ret);
+    ((char *)array)[ret] = '\0';
+    if (outStr)
+        *outStr = (char *)array;
     return ret;
 }
 
 /*
+ * REQUIRES
+ * array is valid
+ *
+ * MODIFIES
+ * none
+ *
+ * EFFECTS
  * Make a copy of an array.
  * The capacity will be set to the number of elements in the array.
- *
  * takes O(n) time
- */ 
+ */
 Array *
-cloneArray(Array *array)
+cloneArray(const Array *array)
 {
     Array *ret;
     size_t vectorSize;
@@ -182,10 +258,17 @@ cloneArray(Array *array)
 }
 
 /*
- * check if an index is compatible with an array
- */ 
+ * REQUIRES
+ * array is valid
+ *
+ * MODIFIES
+ * none
+ *
+ * EFFECTS
+ * returns non-zero if index cannot be used to index into array
+ */
 int
-containsIndexArray(Array *array, size_t index)
+containsIndexArray(const Array *array, size_t index)
 {
     if (!array->count)
         return -1;
@@ -199,16 +282,26 @@ sortCmpFunc(const void *a, const void *b)
 }
 
 /*
- * remove multiple elements (specified by range) from an array.
+ * REQUIRES
+ * array is valid
+ *
+ * MODIFIES
+ * array
+ * outElements
+ *
+ * EFFECTS
+ * Remove multiple elements specified by range from an array.
  * If outElements is not NULL, the removed elements will be copied to 
  * outElements.
  * n is the number of elements to be removed.
- * the range must contain no duplicates
- */ 
+ * the range must contain no duplicates.
+ */
 int
 removeRangeArray(Array *array, void *outElements, const size_t *range,
     size_t n)
 {
+    /* XXX gonna rewrite this one */
+    /* XXX change this to assume that range is sorted */
     size_t r[n];
     char tmp[sizeofArray(array)];
     size_t i;
@@ -239,29 +332,58 @@ removeRangeArray(Array *array, void *outElements, const size_t *range,
 }
 
 /*
+ * REQUIRES
+ * array is valid
+ *
+ * MODIFIES
+ * none
+ *
+ * EFFECTS
  * do a linear search from low to high indexes.
  * return the index of the first elements that matches element.
+ * element must be the same type as the elements in the array.
  * returns -1 if no matches are found.
- *
  * takes O(n) time.
- */ 
+ */
 int
-searchArray(Array *array, const void *element)
+searchArray(const Array *array, const void *restrict element)
 {
-    for (size_t i = 0; i < array->count; i++) {
-        if (!memcmp(getElementArray(array, i), element, array->elementSize))
-            return i;
+    MAXWORD tmpA;
+    MAXWORD tmpB;
+    
+    if (array->elementSize <= sizeof(MAXWORD)) {
+        tmpA = 0;
+        memcpy(&tmpA, element, array->elementSize);
+        for (size_t i = 0; i < array->count; i++) {
+            tmpB = 0;
+            memcpy(&tmpB, getElementArray(array, i), array->elementSize);
+            if (tmpA == tmpB)
+                return i;
+        }
+    } else {
+        for (size_t i = 0; i < array->count; i++) {
+            if (!memcmp(getElementArray(array, i), element, array->elementSize))
+                return i;
+        }
     }
     return -1;
 }
 
-/* 
+/*
+ * REQUIRES
+ * array is valid
+ *
+ * MODIFIES
+ * array
+ *
+ * EFFECTS
  * make space for n more elements.
  * resizes the array if needed.
  * returns NULL on error.
- *
  * takes O(n) if the array is resized. 
- */ 
+ * See expandArray() for details about how the return value should be 
+ * handled.
+ */
 Array *
 growArray(Array *array, size_t n)
 {
@@ -272,18 +394,24 @@ growArray(Array *array, size_t n)
     return array;
 }
 
-
 /*
+ * REQUIRES
+ * array is valid
+ * index is valid
+ *
+ * MODIFIES
+ * array
+ *
+ * EFFECTS
  * Insert an element in the array at index.
  * If element is null, an empty element is inserted.
- * Returns a pointer to the array.  The pointer may differ if the array size 
- * is expanded. All subsequent uses of the array should be made using 
- * the return value.
+ * Returns a pointer to the array. 
+ * The pointer may differ if the array is resized. 
+ * All subsequent uses of the array should be made using the return value.
  * Returns NULL on error, and the array data is left untouched.
- *
  * this takes O(n) time if index != array.count i.e., non-push insertion.
  * appending elements takes O(1) if there is enough capacity
- */ 
+ */
 Array *
 insertArray(Array *array, const void *element, size_t index)
 {
@@ -322,11 +450,18 @@ insertArray(Array *array, const void *element, size_t index)
 }
 
 /*
+ * REQUIRES
+ * array is valid
+ * index is valid
+ *
+ * MODIFIES
+ * array
+ *
+ * EFFECTS
  * make space for n elements at index by shifting elements forward
  * returns NULL on error.
- *
  * this takes O(n) time.
- */ 
+ */
 Array *
 forwardShiftRangeArray(Array *array, size_t index, size_t n)
 {
@@ -348,14 +483,19 @@ forwardShiftRangeArray(Array *array, size_t index, size_t n)
 }
 
 /*
+ * REQUIRES
+ * array is valid
+ *
+ * MODIFIES
+ * array
+ *
+ * EFFECTS
  * remove a continuous range of n elements.
- *
- * returns non-zero on error e.g., array is empty, n is zero, 
- * index + n out of bounds.
- *
+ * returns non-zero on error e.g., array is empty, n is zero, index + n out 
+ * of bounds.
  * This takes O(n) time for non-pop operations.
  * Pop operations take O(1) time.
- */ 
+ */
 int
 removeContinuousRangeArray(Array *array, void *outElements, size_t index,
     size_t n)
