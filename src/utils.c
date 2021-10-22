@@ -38,7 +38,7 @@ die(const char *msg)
  * If outLength is not NULL, then it shall be overwritten with the length of 
  * the input read.
  */ 
-const char *
+char *
 readTextFile(FILE *fp, int *outLength)
 {
     size_t tmp;
@@ -58,7 +58,7 @@ error1:;
 }
 
 /* XXX experimental */
-const void *
+void *
 readBinFile(FILE *fp, int *outLength)
 {
     size_t tmp;

@@ -35,8 +35,8 @@
     *(DOUBLE_PTR) = ((double) (end - start)) / CLOCKS_PER_SEC; \
 }
 
-const char *readTextFile(FILE *fp, int *outLength);
-const void *readBinFile(FILE *fp, int *outLength);
+char *readTextFile(FILE *fp, int *outLength);
+void *readBinFile(FILE *fp, int *outLength);
 void die(const char *msg);
 Array *stringToIntArray(char *str);
 void intSwap(int *restrict x, int *restrict y);
