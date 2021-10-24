@@ -102,7 +102,8 @@ insertVLArray(VLArray *arr, const void *nextElement, size_t elementSize,
         arrayFunc(arr->data, forwardShiftRangeArray(arr->data, 0, nextFrames),
             error1);
         /* push element data */ 
-        memcpy(arr->data->first, nextElement, elementSize);
+        if (nextElement)
+            memcpy(arr->data->first, nextElement, elementSize);
         arrayFunc(arr->sizes, pushArray(arr->sizes, &elementSize), error1);
     } else {
         if (index > arr->offsets->count)
@@ -114,8 +115,9 @@ insertVLArray(VLArray *arr, const void *nextElement, size_t elementSize,
             arrayFunc(arr->data, forwardShiftRangeArray(arr->data,
                 frameStartIndex, nextFrames), error1);
             /* register new element */ 
-            memcpy(getElementArray(arr->data, frameStartIndex), nextElement,
-                elementSize);
+            if (nextElement)
+                memcpy(getElementArray(arr->data, frameStartIndex),
+                    nextElement, elementSize);
             /* push new offset record */  
             arrayFunc(arr->offsets, pushArray(arr->offsets, &frameStartIndex),
                 error1);
@@ -127,8 +129,9 @@ insertVLArray(VLArray *arr, const void *nextElement, size_t elementSize,
             arrayFunc(arr->data, forwardShiftRangeArray(arr->data,
                 frameStartIndex, nextFrames), error1);
             /* register new element */ 
-            memcpy(getElementArray(arr->data, frameStartIndex), nextElement,
-                elementSize);
+            if (nextElement)
+                memcpy(getElementArray(arr->data, frameStartIndex),
+                    nextElement, elementSize);
             /* update offset records */ 
             arrayFunc(arr->offsets, insertArray(arr->offsets, &frameStartIndex,
                 index + 1), error1);
