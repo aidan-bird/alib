@@ -71,7 +71,7 @@ deleteVLArray(VLArray *arr)
  * takes O(n) time
  */ 
 VLArray *
-pushVLArray(VLArray *arr, void *nextElement, size_t elementSize)
+pushVLArray(VLArray *arr, const void *nextElement, size_t elementSize)
 {
     return insertVLArray(arr, nextElement, elementSize, arr->offsets->count);
 }
@@ -82,7 +82,7 @@ pushVLArray(VLArray *arr, void *nextElement, size_t elementSize)
  * takes O(n) time
  */ 
 VLArray *
-insertVLArray(VLArray *arr, void *nextElement, size_t elementSize,
+insertVLArray(VLArray *arr, const void *nextElement, size_t elementSize,
     size_t index)
 {
     int nextFrames;
