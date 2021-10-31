@@ -89,18 +89,6 @@ expandArray(Array *array, size_t blockCount)
     return ret;
 }
 
-/* XXX experimental */
-Array *
-tryPushArray(Array **array, const void *element)
-{
-    Array *tmp;
-
-    if (!(tmp = insertArray(*array, element, (*array)->count)))
-        return NULL;
-    *array = tmp;
-    return tmp;
-}
-
 /*
  * REQUIRES
  * array is valid
@@ -122,6 +110,19 @@ Array *
 pushArray(Array *array, const void *element)
 {
     return insertArray(array, element, array->count);
+}
+
+/* XXX experimental */
+Array *
+tryPushArray(Array **array, const void *element)
+{
+    Array *tmp;
+
+    tmp = pushArray(*array, element);
+    if (!tmp)
+        return NULL;
+    *array = tmp;
+    return tmp;
 }
 
 /*

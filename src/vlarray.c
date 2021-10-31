@@ -18,13 +18,22 @@
 }
 
 /*
- * constructor
+ * REQUIRES
+ * none
  *
- * framesize) element sizes will be counted as the number of frames that they 
+ * MODIFIES
+ * none
+ *
+ * EFFECTS
+ * constructs a new VLArray.
+ *
+ * framesize = element sizes will be counted as the number of frames that they 
  * take up. This parameter determines how large each frame is.
  *
- * blocksize, capacity) see array constructor in array.c
- */ 
+ * (blocksize & capacity) see array constructor in array.c
+ *
+ * returns null on error
+ */
 VLArray *
 newVLArray(int blockSize, int capacity, int frameSize)
 {
@@ -42,6 +51,7 @@ newVLArray(int blockSize, int capacity, int frameSize)
     }
     if (!(ret->sizes = newArray(blockSize, capacity, sizeof(size_t))))
         goto error4;
+    ret->isDirty = 1;
     return ret;
 error4:;
     deleteArray(ret->data);
@@ -54,8 +64,16 @@ error1:;
 }
 
 /*
- * destructor
- */ 
+ * REQUIRES
+ * arr is valid
+ *
+ * MODIFIES
+ * arr
+ *
+ * EFFECTS
+ * delets arr
+ *
+ */
 void
 deleteVLArray(VLArray *arr)
 {
@@ -66,21 +84,57 @@ deleteVLArray(VLArray *arr)
 }
 
 /*
- * push element to end of array
+ * REQUIRES
+ * arr is valid
  *
- * takes O(n) time
- */ 
+ * MODIFIES
+ * arr
+ *
+ * EFFECTS
+ * push an element to the end of the array.
+ *
+ * if nextElement is NULL, this will only reserve space.
+ *
+ * takes O(n) time.
+ *
+ * returns null on error.
+ *
+ * returns a pointer to the arr. all uses of arr should be done using the 
+ * return value.
+ */
 VLArray *
 pushVLArray(VLArray *arr, const void *nextElement, size_t elementSize)
 {
     return insertVLArray(arr, nextElement, elementSize, arr->offsets->count);
 }
 
+/* XXX experimental */
+VLArray *
+tryPushVLArray(VLArray **arr, const void *nextElement, size_t elementSize)
+{
+    VLArray *tmp;
+
+    tmp = pushVLArray(*arr, nextElement, elementSize);
+    if (!tmp)
+        return NULL;
+    *arr = tmp;
+    return tmp;
+}
+
 /*
- * insert element into array at index
+ * REQUIRES
+ * arr is valid
+ *
+ * MODIFIES
+ * arr
+ *
+ * EFFECTS
+ * insert an element into array at index
+ *
+ * see pushVLArray for errors
  *
  * takes O(n) time
- */ 
+ */
 VLArray *
 insertVLArray(VLArray *arr, const void *nextElement, size_t elementSize,
     size_t index)
@@ -141,6 +195,7 @@ insertVLArray(VLArray *arr, const void *nextElement, size_t elementSize,
                 error1);
         }
     }
+    arr->isDirty = 1;
     return arr;
 error1:;
     return NULL;
@@ -180,6 +235,7 @@ removeAtVLArray(VLArray *arr, void *outElement, size_t index)
     /* update the offset array */ 
     for (int i = index; i < arr->offsets->count; i++)
         getOffsetVLArray(arr, i) -= frameDiff;
+    arr->isDirty = 1;
     return 0;
 }
 
@@ -205,12 +261,60 @@ clearVLArray(VLArray *arr)
     clearArray(arr->offsets);
     clearArray(arr->data);
     clearArray(arr->sizes);
+    arr->isDirty = 1;
 }
-
 
 void
 printVLArray(const VLArray *arr)
 {
     for (size_t i = 0; i < getCountVLArray(arr); i++)
         printBinary(getElementVLArray(arr, i), sizeOfElementVLArray(arr, i));
+}
+
+void
+updateTotalSizeVLArray(VLArray *arr)
+{
+    arr->totalSize = 0;
+    for (size_t i = 0; i < getCountVLArray(arr); i++)
+        arr->totalSize += sizeOfElementVLArray(arr, i);
+}
+
+void
+makeCleanVLArray(VLArray *arr)
+{
+    if (!arr->isDirty)
+        return;
+    updateTotalSizeVLArray(arr);
+    arr->isDirty = 0;
+}
+
+size_t
+getSizeVLArray(VLArray *arr)
+{
+    makeCleanVLArray(arr);
+    return arr->totalSize;
+}
+
+char *
+toStringVLArray(VLArray *arr)
+{
+    char *ret;
+    size_t totalSize;
+    size_t lastOffset;
+
+    totalSize = getSizeVLArray(arr) - getCountVLArray(arr) + 1;
+    ret = malloc(totalSize);
+    if (!ret)
+        goto error1;
+    lastOffset = 0;
+    for (size_t i = 0; i < getCountVLArray(arr); i++) {
+        memcpy(ret + lastOffset, getElementVLArray(arr, i),
+            sizeOfElementVLArray(arr, i) - 1);
+        lastOffset += (!sizeOfElementVLArray(arr, i) ?
+            1 : sizeOfElementVLArray(arr, i)) - 1;
+    }
+    ret[totalSize - 1] = '\0';
+    return ret;
+error1:;
+    return NULL;
 }

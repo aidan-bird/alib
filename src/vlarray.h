@@ -24,8 +24,10 @@
     (!(getCountVLArray(VLARRAY_PTR)))
 #define isFullVLArray(VLARRAY_PTR) \
     ((getCountVLArray(VLARRAY_PTR)) >= ((VLARRAY_PTR)->offsets->capacity))
+#define lastIndexVLArray(VLARRAY_PTR) \
+    (getCountVLArray(VLARRAY_PTR) - 1)
 #define peekVLArray(VLARRAY_PTR) \
-(getElementVLArray(VLARRAY_PTR, (getCountVLArray(VLARRAY_PTR) - 1)))
+    (getElementVLArray(VLARRAY_PTR, (lastIndexVLArray(VLARRAY_PTR))))
 
 typedef struct VLArray VLArray;
 
@@ -39,6 +41,10 @@ void clearVLArray(VLArray *VLArray);
 VLArray *insertVLArray(VLArray *arr, const void *nextElement, 
     size_t elementSize, size_t index);
 void printVLArray(const VLArray *arr);
+VLArray *tryPushVLArray(VLArray **arr, const void *nextElement,
+    size_t elementSize);
+size_t getSizeVLArray(VLArray *arr);
+char *toStringVLArray(VLArray *arr);
 
 /*
  * VLARRAY DETAILS AND FIELDS
@@ -71,6 +77,8 @@ struct VLArray
     Array *offsets;
     Array *data;
     Array *sizes;
+    int isDirty;
+    size_t totalSize;
 };
 
 #endif
