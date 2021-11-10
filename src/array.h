@@ -37,6 +37,7 @@ Array *forwardShiftRangeArray(Array *array, size_t index, size_t n);
 
 /* TODO have a function that removes a continuous range of elements */ 
 
+#define getCountArray(ARRAY_PTR) ((ARRAY_PTR)->count)
 #define getElementArray(ARRAY_PTR, INDEX) \
     (((uint8_t *)(ARRAY_PTR)->first) + (ARRAY_PTR)->elementSize * (INDEX))
 #define sizeofArray(ARRAY_PTR) ((ARRAY_PTR)->count * (ARRAY_PTR)->elementSize)
