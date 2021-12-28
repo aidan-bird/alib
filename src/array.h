@@ -1,5 +1,5 @@
-#ifndef ARRAY_H
-#define ARRAY_H
+#ifndef ALIB_ARRAY_H
+#define ALIB_ARRAY_H
 
 /*
  * Aidan Bird 2021
@@ -42,7 +42,7 @@ Array *forwardShiftRangeArray(Array *array, size_t index, size_t n);
     (((uint8_t *)(ARRAY_PTR)->first) + (ARRAY_PTR)->elementSize * (INDEX))
 #define sizeofArray(ARRAY_PTR) ((ARRAY_PTR)->count * (ARRAY_PTR)->elementSize)
 #define lastIndexArray(ARRAY_PTR) ((ARRAY_PTR)->count - 1)
-#define getFirstArray(ARRAY_PTR) (getElementArray((ARRAY_PTR), 0)
+#define getFirstArray(ARRAY_PTR) (getElementArray((ARRAY_PTR), 0))
 #define isEmptyArray(ARRAY_PTR) (!(ARRAY_PTR)->count)
 #define getLastArray(ARRAY_PTR) \
     (getElementArray(ARRAY_PTR, lastIndexArray(ARRAY_PTR)))
