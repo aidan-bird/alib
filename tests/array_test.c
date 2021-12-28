@@ -2,14 +2,31 @@
 #include <check.h>
 #include "../src/array.h"
 
-START_TEST (test_array_new) {
+START_TEST (test_newArray) {
     Array *arr;
 
     arr = newArray(-1, -1, sizeof(int));
+
+
     if (arr)
         deleteArray(arr);
 }
 END_TEST
+
+START_TEST (test_expandArray) {
+    Array *arr;
+    Array *tmp;
+
+    arr = newArray(-1, -1, sizeof(int));
+    if (!arr)
+        ck_abort_msg("newArray returned null");
+    tmp = expandArray(arr, 0);
+    tmp = expandArray(arr, 1);
+    deleteArray(arr);
+}
+END_TEST
+
+
 
 Suite *
 array_suite(void)
@@ -19,7 +36,7 @@ array_suite(void)
 
     s = suite_create("Array");
     tc_core = tcase_create("Core");
-    tcase_add_test(tc_core, test_array_new);
+    tcase_add_test(tc_core, test_newArray);
     suite_add_tcase(s, tc_core);
     return s;
 }
