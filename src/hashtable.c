@@ -158,6 +158,8 @@ getHashTable(const HashTable *ht, const uint8_t *key, size_t nKey)
 
     bucketID = ht->hashFunc(key, nKey) % getBucketCountHashTable(ht);
     bucket = *(Array **)getElementArray(ht->records, bucketID);
+    if (!bucket)
+        return NULL;
     for (size_t i = 0; i < getCountArray(bucket); i++) {
         testRecord = (ValueRecord *)getElementArray(bucket, i);
         testKeySize = sizeOfElementVLArray(ht->keys, testRecord->keyIndex);

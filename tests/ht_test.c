@@ -1,79 +1,103 @@
 #include <stdlib.h>
 #include <string.h>
 #include <check.h>
+#include <stdio.h>
 #include "../src/hashtable.h"
+#include "../src/utils.h"
 
-START_TEST (new_HashTable) 
+#define N_VALID_KEYS 1000
+
+void
+testHashTableInsert(HashTable *ht, size_t n)
 {
-    HashTable *ht;
+    size_t len;
+    char key[16];
 
-    ht = newHashTable(crc32, 10, 0.75);
-    if (!ht)
-        ck_abort_msg("newHashTable returned null");
+    for (size_t i = 0; i < n; i++) {
+        sprintf(key, "%u", i);
+        len = strlen(key) + 1;
+        // printf("Inserting (%s, %s)\n", key, key);
+        ck_assert_msg(insertHashTable(ht, key, len, key, len) == 0,
+            "cannot insert (%s, %s) into hashtable", key, key);
+    }
 }
-END_TEST
 
-START_TEST (insert_HashTable) 
+void
+testRetrieveValidKeys(HashTable *ht)
 {
-    int iret;
-    const char *k = "my key";
-    const char *v = "my value";
-    HashTable *ht;
+    const void *validKey;
+    const void *expectedValue;
+    const ValueRecord *record;
+    const void *recordValue;
+    size_t recordValueSize;
+    size_t validKeySize;
+    size_t expectedValueSize;
 
-    ht = newHashTable(crc32, 10);
-    iret = insertHashTable(ht, k, strlen(k) + 1, v, strlen(v) + 1);
+    for (size_t i = 0; i < getCountHashTable(ht); i++) {
+        /* fetch known KV */
+        validKey = getElementVLArray(ht->keys, i);
+        validKeySize = sizeOfElementVLArray(ht->keys, i);
+        expectedValue = getElementVLArray(ht->values, i);
+        expectedValueSize = sizeOfElementVLArray(ht->values, i);
+        /* fetch value using valid key */
+        record = getHashTable(ht, validKey, validKeySize);
+        ck_assert_msg(record, "expected record, got NULL");
+        recordValue = getElementVLArray(ht->values, record->valueIndex);
+        recordValueSize = sizeOfElementVLArray(ht->values, record->valueIndex);
+        /* test fetched value against known value */
+        ck_assert_msg(recordValueSize == expectedValueSize,
+            "fetched value and known value sizes differ");
+        ck_assert_msg(!memcmp(recordValue, expectedValue, expectedValueSize),
+            "fetched value and known value differ");
+    }
 }
-END_TEST
 
-START_TEST (delete_HashTable) 
+START_TEST (test_HashTable)
 {
-    HashTable *ht;
-
-    ht = newHashTable(crc32, 10);
-    if (!ht)
-        ck_abort_msg("newHashTable returned null");
-    deleteHashTable(ht);
-}
-END_TEST
-
-START_TEST (get_HashTable) 
-{
-    int iret;
-    const char *k = "my key";
-    const char *v = "my value";
-    const char *vv;
+    const size_t n = N_VALID_KEYS;
+    char key[16];
+    size_t nKey;
+    size_t nValue;
+    int r;
     const char *kk;
+    const char *vv;
+    const ValueRecord *rec;
+    size_t len;
+    const int invalidKeys[] = { -1, (N_VALID_KEYS + 1) };
     HashTable *ht;
-    ValueRecord *rec;
 
-    ht = newHashTable(crc32, 10);
-    iret = insertHashTable(ht, k, strlen(k) + 1, v, strlen(v) + 1);
-    rec = getHashTable(ht, k, strlen(k) + 1);
-    vv = getElementVLArray(ht->values, rec->valueIndex);
-    kk = getElementVLArray(ht->keys, rec->keyIndex);
-    puts(vv);
-    puts(kk);
-    deleteHashTable(ht);
+    /* make new hash table */
+    puts("Making new HashTable");
+    ht = newHashTable(crc32, -1, 0.75);
+    ck_assert_msg(ht != NULL, "newHashTable() returned NULL");
+    /* test inserting KVs */
+    printf("Inserting %u unique KVs", n);
+    testHashTableInsert(ht, n);
+    /* check if all of them were inserted */
+    ck_assert_msg(getCountHashTable(ht) == n, "KV count mismatch");
+    /* try retrieving all KVs */
+    puts("Retrieving all KVs");
+    testRetrieveValidKeys(ht);
+    /* try invalid keys */
+    puts("Trying invalid keys");
+    for (size_t i = 0; i < LEN(invalidKeys); i++) {
+        ck_assert_msg(!getHashTable(ht, invalidKeys + i, sizeof(int)),
+            "expected NULL by using invalid key (%d)", invalidKeys[i]);
+    }
+    puts("hashtable test complete");
 }
 END_TEST
-
-// START_TEST (test_crc32)
-// {
-// }
-// END_TEST
 
 Suite *
-array_suite(void)
+ht_suite(void)
 {
     Suite *s;
     TCase *tc_core;
 
     s = suite_create("HashTable");
     tc_core = tcase_create("Core");
-    tcase_add_test(tc_core, new_HashTable);
-    tcase_add_test(tc_core, delete_HashTable);
-    tcase_add_test(tc_core, insert_HashTable);
-    tcase_add_test(tc_core, get_HashTable);
+    tcase_add_test(tc_core, test_HashTable);
+    suite_add_tcase(s, tc_core);
     return s;
 }
 
@@ -84,10 +108,11 @@ main(void)
     Suite *s;
     SRunner *sr;
 
-    s = array_suite();
+    s = ht_suite();
     sr = srunner_create(s);
+    srunner_set_fork_status (sr, CK_NOFORK);
     srunner_run_all(sr, CK_NORMAL);
     number_failed = srunner_ntests_failed(sr);
     srunner_free(sr);
-    return (number_failed == 0) ? EXIT_SUCCESS : EXIT_FAILURE;
+    return !number_failed ? EXIT_SUCCESS : EXIT_FAILURE;
 }
