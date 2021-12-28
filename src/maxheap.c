@@ -1,3 +1,5 @@
+#ifdef debug
+
 #include <stdlib.h>
 
 #include "./maxheap.h"
@@ -35,3 +37,4 @@ deleteMaxHeap(MaxHeap *heap)
     free(heap);
 }
 
+#endif

@@ -1,3 +1,5 @@
+#ifdef debug
+
 #ifndef MAX_HEAP_H
 #define MAX_HEAP_H
 
@@ -22,4 +24,5 @@ void deleteMaxHeap(MaxHeap *heap);
 MaxHeap *newMaxHeap(int blockSize, int capacity, size_t elementSize,
     MaxHeapCmpFunc cmp);
 
+#endif
 #endif
