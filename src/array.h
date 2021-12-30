@@ -48,6 +48,7 @@ Array *forwardShiftRangeArray(Array *array, size_t index, size_t n);
     (getElementArray(ARRAY_PTR, lastIndexArray(ARRAY_PTR)))
 #define isIndexValidArray(ARRAY_PTR, INDEX) \
     ((INDEX) >= 0 && (INDEX) < (ARRAY_PTR)->count)
+#define getCapacityArray(ARRAY_PTR) ((ARRAY_PTR)->capacity)
 
 /*
  * ARRAY DETAILS AND FIELDS

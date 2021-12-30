@@ -28,6 +28,7 @@
     (getCountVLArray(VLARRAY_PTR) - 1)
 #define peekVLArray(VLARRAY_PTR) \
     (getElementVLArray(VLARRAY_PTR, (lastIndexVLArray(VLARRAY_PTR))))
+#define getCapacityVLArray(VLARRAY_PTR) ((VLARRAY_PTR)->offsets->capacity)
 
 typedef struct VLArray VLArray;
 

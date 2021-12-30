@@ -17,7 +17,7 @@ ALIB_OBJ=$(patsubst $(ALIB_SRC_PATH)/%,$(OBJ_PATH)/%,$(ALIB_SRC:.c=.o))
 all: $(EXE)
 
 $(OBJ_PATH)/%.o: $(ALIB_SRC_PATH)/%.c
-	$(CC) -c $(INC) -o $@ $< $(CFLAGS) 
+	$(CC) -DALIB_TESTING -c $(INC) -o $@ $< $(CFLAGS) 
 
 $(OBJ_PATH)/%.o: $(SRC_PATH)/%.c
 	$(CC) -c $(INC) -o $@ $< $(CFLAGS) 

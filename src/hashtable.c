@@ -1,5 +1,8 @@
 #include <stdlib.h>
 #include <string.h>
+#ifdef ALIB_TESTING 
+#include <check.h>
+#endif
 
 #include "./hashtable.h"
 
@@ -30,15 +33,23 @@ newHashTable(HashFunc hashFunc, int capacity, float maxLoadFactor)
         goto error3;
     if (!(ret->records = newArray(-1, capacity, sizeof(Array *))))
         goto error4;
+    if (!(ret->hashes = newArray(-1, capacity, sizeof(uint32_t))))
+        goto error5;
     /* NULL elements denote uninitialized buckets */
-    for (size_t i = 0; i < capacity; i++)
-        pushArray(ret->records, &nullElement);
+    for (size_t i = 0; i < capacity; i++) {
+        if (!(tryPushArray(&ret->records, &nullElement)))
+            goto error6;
+    }
     ret->hashFunc = hashFunc;
     ret->loadFactor = 0.0;
     ret->nonEmptyBuckets = 0;
     ret->maxLoadFactor = maxLoadFactor;
     ret->isDirty = 0;
     return ret;
+error6:;
+    deleteArray(ret->hashes);
+error5:;
+    deleteArray(ret->records);
 error4:;
     deleteVLArray(ret->values);
 error3:;
@@ -47,6 +58,41 @@ error2:;
     free(ret);
 error1:;
     return NULL;
+}
+
+static void
+deleteBuckets(HashTable *ht)
+{
+    uint32_t hash;
+    Array *bucket;
+    size_t bucketID;
+    size_t bucketCount;
+#ifdef ALIB_TESTING 
+    size_t deleteCount; 
+#endif
+
+    bucketCount = getBucketCountHashTable(ht);
+#ifdef ALIB_TESTING 
+    deleteCount = 0;
+#endif
+    for (size_t i = 0; i < getCountArray(ht->hashes); i++) {
+        /* delete all buckets */
+        hash = *(uint32_t *)getElementArray(ht->hashes, i);
+        bucketID = hash % bucketCount;
+        bucket = *(Array **)getElementArray(ht->records, bucketID);
+        if (bucket) {
+            deleteArray(bucket);
+            *(Array **)getElementArray(ht->records, bucketID) = NULL;
+#ifdef ALIB_TESTING 
+            deleteCount++;
+#endif
+        }
+    }
+#ifdef ALIB_TESTING 
+    ck_assert_msg(deleteCount == ht->nonEmptyBuckets,
+        "%d buckets were not deleted", ht->nonEmptyBuckets - deleteCount);
+#endif
+    ht->nonEmptyBuckets = 0;
 }
 
 /*
@@ -59,17 +105,11 @@ error1:;
 void
 deleteHashTable(HashTable *ht) 
 {
-    Array *bucket;
-
     if (!ht)
         return;
-    for (size_t i = 0; i < getCountArray(ht->records); i++) {
-        /* free all buckets */
-        bucket = *(Array **)getElementArray(ht->records, i);
-        if (bucket)
-            deleteArray(bucket);
-    }
+    deleteBuckets(ht);
     deleteArray(ht->records);
+    deleteArray(ht->hashes);
     deleteVLArray(ht->keys);
     deleteVLArray(ht->values);
     free(ht);
@@ -93,44 +133,42 @@ insertHashTable(HashTable *ht, const uint8_t *key, size_t nKey,
     const uint8_t *value, size_t nValue) 
 {
     size_t hash;
-    size_t keyIndex;
-    size_t valueIndex;
+    size_t kvIndex;
     size_t bucketID;
     Array **bucketPtr;
-    ValueRecord nextRecord;
 
     /* hash the key */
     hash = ht->hashFunc(key, nKey);
     /* save the key */
     if (!(tryPushVLArray(&ht->keys, key, nKey)))
         goto error1;
-    keyIndex = lastIndexVLArray(ht->keys);
+    /* 
+     * kvIndex indexes into both keys and values, since keys are index mapped 
+     * to values
+     */
+    kvIndex = lastIndexVLArray(ht->keys);
     /* save the value */
     if (!(tryPushVLArray(&ht->values, value, nValue)))
         goto error1;
-    valueIndex = lastIndexVLArray(ht->values);
-    /* compute bucketID using hashFunc */
-    bucketID = hash % getBucketCountHashTable(ht);
+    /* resize if needed */
     if (getLoadFactor(ht) > ht->maxLoadFactor) {
-        /* resize and rehash */
-        /* XXX temporary n for growHashTable */
         if (growHashTable(ht, ht->records->capacity))
             goto error1;
     }
+    /* compute bucketID using hashFunc */
+    bucketID = hash % getBucketCountHashTable(ht);
     /* make new bucket if needed */
     bucketPtr = (Array **)getElementArray(ht->records, bucketID);
     if (!*bucketPtr) {
-        if (!(*bucketPtr = newArray(1, 1, sizeof(ValueRecord))))
+        if (!(*bucketPtr = newArray(1, 1, sizeof(size_t))))
             goto error1;
         ht->nonEmptyBuckets++;
     }
     /* push record into bucket */
-    nextRecord = (ValueRecord) { 
-        .keyIndex = keyIndex,
-        .hashCode = hash,
-        .valueIndex = valueIndex,
-    };
-    if (!(tryPushArray(bucketPtr, &nextRecord)))
+    if (!(tryPushArray(bucketPtr, &kvIndex)))
+        goto error1;
+    /* save hash so it does not need to be recomputed every resize */
+    if (!(tryPushArray(&ht->hashes, &hash)))
         goto error1;
     ht->isDirty = 1;
     return 0;
@@ -143,10 +181,10 @@ error1:;
  * key is nKey bytes long.
  *
  * EFFECTS
- * returns the ValueRecord that the key is associated with.
- * returns NULL on error.
+ * returns the index of the kv pair. 
+ * returns negative on error
  */
-const ValueRecord *
+int
 getHashTable(const HashTable *ht, const uint8_t *key, size_t nKey)
 {
     size_t keyIndex;
@@ -154,22 +192,22 @@ getHashTable(const HashTable *ht, const uint8_t *key, size_t nKey)
     size_t testKeySize;
     const void *testKey;
     const Array *bucket;
-    const ValueRecord *testRecord;
+    size_t kvIndex;
 
     bucketID = ht->hashFunc(key, nKey) % getBucketCountHashTable(ht);
     bucket = *(Array **)getElementArray(ht->records, bucketID);
     if (!bucket)
         return NULL;
     for (size_t i = 0; i < getCountArray(bucket); i++) {
-        testRecord = (ValueRecord *)getElementArray(bucket, i);
-        testKeySize = sizeOfElementVLArray(ht->keys, testRecord->keyIndex);
+        kvIndex = *(size_t *)getElementArray(bucket, i);
+        testKeySize = sizeOfElementVLArray(ht->keys, kvIndex);
         if (testKeySize != nKey)
             continue;
-        testKey = getElementVLArray(ht->keys, testRecord->keyIndex);
+        testKey = getElementVLArray(ht->keys, kvIndex);
         if (!memcmp(testKey, key, nKey))
-            return testRecord;
+            return kvIndex;
     }
-    return NULL;
+    return -1;
 }
 
 /*
@@ -187,17 +225,17 @@ growHashTable(HashTable *ht, size_t n)
     size_t k;
     size_t nonEmptyBuckets;
     size_t newCapacity;
-    size_t hash;
+    uint32_t hash;
     size_t bucketID;
     Array *nextRecordTab;
-    ValueRecord nextRecord;
+    size_t kvIndex;
     const void *nullElement;
     Array **bucketPtr;
 
+    /* allocate more buckets */
     nonEmptyBuckets = 0;
     newCapacity = ht->records->capacity + n;
     nullElement = NULL;
-    /* allocate more buckets */
     nextRecordTab = newArray(ht->records->blockSize, newCapacity, 
         sizeof(Array *));
     if (!nextRecordTab)
@@ -207,44 +245,26 @@ growHashTable(HashTable *ht, size_t n)
         if (!(tryPushArray(&nextRecordTab, &nullElement)))
             goto error2;
     }
-    /* rehash and insert all keys into the new buckets */
+    /* insert all keys into the new buckets */
     for (size_t i = 0; i < getCountVLArray(ht->keys); i++) {
-        /* get hash code and bucketID */
-        hash = ht->hashFunc(getElementVLArray(ht->keys, i),
-            sizeOfElementVLArray(ht->keys, i));
+        /* get hash code and new bucketID */
+        hash = getElementArray(ht->hashes, i);
         bucketID = hash % newCapacity;
+        /* initialize new bucket if needed */
         bucketPtr = (Array **)getElementArray(nextRecordTab, bucketID);
         if (!*bucketPtr) {
-            /* initialize new bucket */
-            if (!(*bucketPtr = newArray(1, 1, sizeof(ValueRecord))))
+            if (!(*bucketPtr = newArray(1, 1, sizeof(size_t))))
                 goto error3;
             nonEmptyBuckets++;
         }
         /* put next record into bucket */
-        nextRecord = (ValueRecord) { 
-            .keyIndex = i,
-            .hashCode = hash,
-            .valueIndex = i,
-        };
-        if (!(tryPushArray(bucketPtr, &nextRecord)))
+        if (!(tryPushArray(bucketPtr, &i)))
             goto error3;
-        /* 
-         * TODO for memory savings, consider placing keys and values into one 
-         * vlarray, one after each other.
-         */
     }
-    /* push updated bucket table to ht */
-    j = 0;
-    k = 0;
-    while (j < ht->nonEmptyBuckets) {
-        bucketPtr = (Array **)getElementArray(ht->records, k);
-        k++;
-        if (!*bucketPtr)
-            continue;
-        deleteArray(*bucketPtr);
-        j++;
-    }
+    /* delete old buckets */
+    deleteBuckets(ht);
     deleteArray(ht->records);
+    /* configure ht to use new buckets */
     ht->records = nextRecordTab;
     ht->isDirty = 1;
     ht->nonEmptyBuckets = nonEmptyBuckets;
@@ -281,6 +301,21 @@ getLoadFactor(HashTable *ht)
 {
     cleanHashTable(ht);
     return ht->loadFactor;
+}
+
+/*
+ * EFFECTS
+ * returns the value associated with a key.
+ * returns NULL on error
+ */
+void *
+getValueHashTable(const HashTable *ht, const uint8_t *key, size_t nKey)
+{
+    size_t kvIndex;
+
+    if ((kvIndex = getHashTable(ht, key, nKey)) < 0)
+        return NULL;
+    return getElementVLArray(ht->values, kvIndex);
 }
 
 /*
