@@ -28,8 +28,7 @@ HashTable *newHashTable(HashFunc hashFunc, int capacity, float maxLoadFactor);
 void deleteHashTable(HashTable *ht);
 int insertHashTable(HashTable *ht, const uint8_t *key, size_t nKey,
     const uint8_t *value, size_t nValue);
-int getHashTable(const HashTable *ht, const uint8_t *key,
-    size_t nKey);
+int getHashTable(const HashTable *ht, const uint8_t *key, size_t nKey);
 int growHashTable(HashTable *ht, size_t n);
 float getLoadFactor(HashTable *ht);
 void *getValueHashTable(const HashTable *ht, const uint8_t *key, size_t nKey);
@@ -40,5 +39,14 @@ uint32_t crc32(const uint8_t *data, size_t n);
 
 #define getBucketCountHashTable(HASH_TABLE_PTR) \
     (getCountArray((HASH_TABLE_PTR)->records))
+
+#define getBucketIDHashTable(HASH_TABLE_PTR, HASH) \
+     ((HASH) % getBucketCountHashTable(HASH_TABLE_PTR))
+
+#define getBucketPtrFromBucketIDHashTable(HASH_TABLE_PTR, BUCKET_ID) \
+    ((Array **)getElementArray((HASH_TABLE_PTR)->records, (BUCKET_ID)))
+
+#define getHashHashTable(HASH_TABLE_PTR, KV_INDEX) \
+    (*(uint32_t *)getElementArray((HASH_TABLE_PTR)->hashes, (KV_INDEX)))
 
 #endif

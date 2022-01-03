@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include "../src/hashtable.h"
 #include "../src/utils.h"
+#include "../src/hashing.h"
 
 #define N_VALID_KEYS 1000
 
@@ -27,13 +28,32 @@ static const int _testValuesInt[] = {
 static const int _testKeysInt[] = {
     1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11
 };
+static const int *testValuesInt[LEN(_testValuesInt)];
+static const int *testKeysInt[LEN(_testKeysInt)];
 static const float maxLoadFactor = 0.75;
 static const float capacity = 10;
 static size_t testKeyConstLenSizes[LEN(testKeysConstLen)];
 static size_t testKeyVarLenSizes[LEN(testKeysVarLen)];
 static size_t testValueVarLenSizes[LEN(testKeysVarLen)];
-static const int *testValuesInt[LEN(_testValuesInt)];
-static const int *testKeysInt[LEN(_testKeysInt)];
+
+static void
+setupTestValues()
+{
+    size_t tmp;
+
+    /* setup testing data */
+    tmp = strlen(testKeysConstLen[0]) + 1;
+    for (size_t i = 0; i < LEN(testKeyConstLenSizes); i++)
+        testKeyConstLenSizes[i] = tmp;
+    for (size_t i = 0; i < LEN(testKeyVarLenSizes); i++)
+        testKeyVarLenSizes[i] = strlen(testKeysVarLen[i]) + 1;
+    for (size_t i = 0; i < LEN(testValueVarLenSizes); i++)
+        testValueVarLenSizes[i] = strlen(testValuesVarLen[i]) + 1;
+    for (size_t i = 0; i < LEN(testValuesInt); i++)
+        testValuesInt[i] = _testValuesInt + i;
+    for (size_t i = 0; i < LEN(testKeysInt); i++)
+        testKeysInt[i] = _testKeysInt + i;
+}
 
 static HashTable *
 spawnHashTable()
@@ -57,7 +77,7 @@ checkKVConstKVSize(const HashTable *ht, const void **expectedKeys,
     for (size_t i = 0; i < n; i++) {
         /* get record */
         kvIndex = getHashTable(ht, expectedKeys[i], expectedKeySize);
-        ck_assert_msg(kvIndex < 0,
+        ck_assert_msg(kvIndex >=0,
             "expected key (#%d) is not mapped to any value", i);
         /* get value */
         retrievedValue = getValueHashTable(ht, expectedKeys[i],
@@ -86,7 +106,7 @@ checkKV(const HashTable *ht, const void **expectedKeys,
     for (size_t i = 0; i < n; i++) {
         /* get record */
         kvIndex = getHashTable(ht, expectedKeys[i], expectedKeySizes[i]);
-        ck_assert_msg(kvIndex < 0,
+        ck_assert_msg(kvIndex >= 0,
             "expected key (#%d) is not mapped to any value", i);
         /* get value */
         retrievedValue = getValueHashTable(ht, expectedKeys[i],
@@ -140,12 +160,17 @@ insertHashTableInt()
 {
     HashTable *ht;
 
+    size_t tmp;
+    uint32_t hash;
+
     ht = spawnHashTable();
     for (size_t i = 0; i < LEN(testKeysInt); i++) {
-        ck_assert_msg(insertHashTable(ht, testKeysInt + i, sizeof(int),
-            testValuesInt + i, sizeof(int)) == 0,
+        ck_assert_msg(insertHashTable(ht, testKeysInt[i], sizeof(int),
+            testValuesInt[i], sizeof(int)) == 0,
             "insertHashTable failed with int key value: %d, %d",
-            testKeysInt[i], testValuesInt[i]);
+            *testKeysInt[i], *testValuesInt[i]);
+        hash = getHashHashTable(ht, i);
+        tmp = getBucketIDHashTable(ht, hash);
     }
     return ht;
 }
@@ -186,7 +211,7 @@ testRetrieveValidKeys(HashTable *ht)
         expectedValueSize = sizeOfElementVLArray(ht->values, i);
         /* fetch value using valid key */
         kvIndex = getHashTable(ht, validKey, validKeySize);
-        ck_assert_msg(kvIndex < 0, "got invalid kvIndex");
+        ck_assert_msg(kvIndex >= 0, "got invalid kvIndex");
         recordValue = getElementVLArray(ht->values, kvIndex);
         recordValueSize = sizeOfElementVLArray(ht->values, kvIndex);
         /* test fetched value against known value */
@@ -219,8 +244,10 @@ START_TEST(testNewHashTable_CheckFields)
         "maxLoadFactor is invalid");
     ck_assert_msg(ht->hashFunc == crc32, "hashFunc is invalid");
     /* check capacity */
-    ck_assert_msg(getCapacityArray(ht->records) == capacity,
-        "capacity mismatch in records");
+    // ck_assert_msg(getCapacityArray(ht->records) == capacity,
+    //     "capacity mismatch in records");
+    // ck_assert_msg(getCapacityArray(ht->hashes) == capacity,
+    //     "capacity mismatch in hashes");
     ck_assert_msg(getCapacityVLArray(ht->keys) == capacity,
         "capacity mismatch in keys");
     ck_assert_msg(getCapacityVLArray(ht->values) == capacity,
@@ -294,52 +321,6 @@ START_TEST(testGetHashTable_Int)
 }
 END_TEST
 
-// START_TEST(testGrowHashTable) 
-// {
-// }
-// END_TEST
-// 
-// START_TEST(testGetLoadFactor) 
-// {
-// }
-// END_TEST
-
-// START_TEST (test_HashTable)
-// {
-//     const size_t n = N_VALID_KEYS;
-//     char key[16];
-//     size_t nKey;
-//     size_t nValue;
-//     int r;
-//     const char *kk;
-//     const char *vv;
-//     const ValueRecord *rec;
-//     size_t len;
-//     const int invalidKeys[] = { -1, (N_VALID_KEYS + 1) };
-//     HashTable *ht;
-// 
-//     /* make new hash table */
-//     puts("Making new HashTable");
-//     ht = newHashTable(crc32, -1, 0.75);
-//     ck_assert_msg(ht != NULL, "newHashTable() returned NULL");
-//     /* test inserting KVs */
-//     printf("Inserting %u unique KVs", n);
-//     testHashTableInsert(ht, n);
-//     /* check if all of them were inserted */
-//     ck_assert_msg(getCountHashTable(ht) == n, "KV count mismatch");
-//     /* try retrieving all KVs */
-//     puts("Retrieving all KVs");
-//     testRetrieveValidKeys(ht);
-//     /* try invalid keys */
-//     puts("Trying invalid keys");
-//     for (size_t i = 0; i < LEN(invalidKeys); i++) {
-//         ck_assert_msg(!getHashTable(ht, invalidKeys + i, sizeof(int)),
-//             "expected NULL by using invalid key (%d)", invalidKeys[i]);
-//     }
-//     puts("hashtable test complete");
-// }
-// END_TEST
-
 Suite *
 ht_suite()
 {
@@ -371,20 +352,8 @@ main(void)
     int number_failed;
     Suite *s;
     SRunner *sr;
-    size_t tmp;
 
-    /* setup testing data */
-    tmp = strlen(testKeysConstLen[0]) + 1;
-    for (size_t i = 0; i < LEN(testKeyConstLenSizes); i++)
-        testKeyConstLenSizes[i] = tmp;
-    for (size_t i = 0; i < LEN(testKeyVarLenSizes); i++)
-        testKeyVarLenSizes[i] = strlen(testKeysVarLen[i]) + 1;
-    for (size_t i = 0; i < LEN(testValueVarLenSizes); i++)
-        testValueVarLenSizes[i] = strlen(testValuesVarLen[i]) + 1;
-    for (size_t i = 0; i < LEN(testValuesInt); i++)
-        testValuesInt[i] = _testValuesInt + i;
-    for (size_t i = 0; i < LEN(testKeysInt); i++)
-        testKeysInt[i] = _testKeysInt + i;
+    setupTestValues();
     /* run tests */
     s = ht_suite();
     sr = srunner_create(s);

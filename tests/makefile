@@ -8,7 +8,7 @@ OBJ=$(patsubst $(SRC_PATH)/%,$(OBJ_PATH)/%,$(SRC:.c=.o))
 
 INC= -lm -lcheck
 LDFLAGS = -lm -lcheck
-CFLAGS = -Wall -Wextra -std=c99 -ggdb3
+CFLAGS = -Wall -Wextra -std=c99 -ggdb3 -g3
 
 ALIB_SRC_PATH=../src
 ALIB_SRC=$(wildcard $(ALIB_SRC_PATH)/*.c)
