@@ -1,32 +1,66 @@
 #include <stdlib.h>
 #include <check.h>
 #include "../src/array.h"
+#include "../src/utils.h"
 
-START_TEST (test_newArray) {
-    Array *arr;
-
-    arr = newArray(-1, -1, sizeof(int));
-
-
-    if (arr)
-        deleteArray(arr);
+static void
+testTryPushArray(Array *arr, const int *testset, size_t n)
+{
+    for (size_t i = 0; i < n; i++) {
+        ck_assert_msg(tryPushArray(&arr, testset + i), 
+            "tryPushArray() failed");
+    }
 }
-END_TEST
 
-START_TEST (test_expandArray) {
+static void
+testGetElementArray(Array *arr, const int *testset, size_t n)
+{
+    ck_assert_msg(getCountArray(arr) == n, "element count mismatch");
+    for (size_t i = 0; i < n; i++) {
+        ck_assert_msg(*(const int *)getElementArray(arr, i) == testset[i],
+            "element and testset differ");
+    }
+}
+
+static void
+testClearArray(Array *arr)
+{
+    clearArray(arr);
+    ck_assert_msg(getCountArray(arr) == 0, "clearArray() failed");
+}
+
+// static void
+// test array Read operations
+
+
+
+static void
+testPopArray(Array *arr)
+{
+}
+
+START_TEST (test_array) {
     Array *arr;
-    Array *tmp;
+    const int testingData[] = { -5, -4, -3, -2, -1, 0, 1, 2, 3, 4, 5 };
 
+    puts("testing newArray()");
     arr = newArray(-1, -1, sizeof(int));
-    if (!arr)
-        ck_abort_msg("newArray returned null");
-    tmp = expandArray(arr, 0);
-    tmp = expandArray(arr, 1);
+    ck_assert_msg(arr, "newArray() returned null");
+    puts("testing tryPushArray()");
+    testTryPushArray(arr, testingData, LEN(testingData));
+    puts("testing getElementArray()");
+    testGetElementArray(arr, testingData, LEN(testingData));
+    puts("testing clearArray()");
+    testClearArray(arr);
+
+    // puts("testing pop");
+    // 
+    // removeAtArray()
+    // puts("testing delete");
+
     deleteArray(arr);
 }
 END_TEST
-
-
 
 Suite *
 array_suite(void)
@@ -36,7 +70,7 @@ array_suite(void)
 
     s = suite_create("Array");
     tc_core = tcase_create("Core");
-    tcase_add_test(tc_core, test_newArray);
+    tcase_add_test(tc_core, test_array);
     suite_add_tcase(s, tc_core);
     return s;
 }
@@ -50,6 +84,7 @@ main(void)
 
     s = array_suite();
     sr = srunner_create(s);
+    srunner_set_fork_status(sr, CK_NOFORK);
     srunner_run_all(sr, CK_NORMAL);
     number_failed = srunner_ntests_failed(sr);
     srunner_free(sr);

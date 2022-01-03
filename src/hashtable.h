@@ -3,13 +3,13 @@
 
 #include <stddef.h>
 #include <stdint.h>
+#include <stdio.h>
 
 #include "./array.h"
 #include "./vlarray.h"
 
 typedef struct HashTable HashTable;
-typedef struct ValueRecord ValueRecord;
-typedef size_t (*HashFunc)(const uint8_t *data, size_t n);
+typedef uint32_t (*HashFunc)(const uint8_t *data, size_t n);
 
 struct HashTable
 {
@@ -20,25 +20,18 @@ struct HashTable
     VLArray *keys;
     VLArray *values;
     Array *records;
+    Array *hashes;
     HashFunc hashFunc;
-};
-
-struct ValueRecord
-{
-    size_t keyIndex;
-    size_t hashCode;
-    size_t valueIndex;
 };
 
 HashTable *newHashTable(HashFunc hashFunc, int capacity, float maxLoadFactor);
 void deleteHashTable(HashTable *ht);
 int insertHashTable(HashTable *ht, const uint8_t *key, size_t nKey,
     const uint8_t *value, size_t nValue);
-const ValueRecord *getHashTable(const HashTable *ht, const uint8_t *key,
-    size_t nKey);
+int getHashTable(const HashTable *ht, const uint8_t *key, size_t nKey);
 int growHashTable(HashTable *ht, size_t n);
 float getLoadFactor(HashTable *ht);
-
+void *getValueHashTable(const HashTable *ht, const uint8_t *key, size_t nKey);
 uint32_t crc32(const uint8_t *data, size_t n);
 
 #define getCountHashTable(HASH_TABLE_PTR) \
@@ -46,5 +39,14 @@ uint32_t crc32(const uint8_t *data, size_t n);
 
 #define getBucketCountHashTable(HASH_TABLE_PTR) \
     (getCountArray((HASH_TABLE_PTR)->records))
+
+#define getBucketIDHashTable(HASH_TABLE_PTR, HASH) \
+     ((HASH) % getBucketCountHashTable(HASH_TABLE_PTR))
+
+#define getBucketPtrFromBucketIDHashTable(HASH_TABLE_PTR, BUCKET_ID) \
+    ((Array **)getElementArray((HASH_TABLE_PTR)->records, (BUCKET_ID)))
+
+#define getHashHashTable(HASH_TABLE_PTR, KV_INDEX) \
+    (*(uint32_t *)getElementArray((HASH_TABLE_PTR)->hashes, (KV_INDEX)))
 
 #endif
