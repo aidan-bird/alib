@@ -78,7 +78,7 @@ checkKVConstKVSize(const HashTable *ht, const void **expectedKeys,
         /* get record */
         kvIndex = getHashTable(ht, expectedKeys[i], expectedKeySize);
         ck_assert_msg(kvIndex >=0,
-            "expected key (#%d) is not mapped to any value", i);
+            "expected key (#%ld) is not mapped to any value", i);
         /* get value */
         retrievedValue = getValueHashTable(ht, expectedKeys[i],
             expectedKeySize);
@@ -88,9 +88,9 @@ checkKVConstKVSize(const HashTable *ht, const void **expectedKeys,
         retrievedValueSize = sizeOfElementVLArray(ht->values, kvIndex);
         /* check if value matches the expected value */
         ck_assert_msg(expectedValueSize == retrievedValueSize,
-            "expected value size (#%d) differs", i);
+            "expected value size (#%ld) differs", i);
         ck_assert_msg(!memcmp(expectedValues[i], retrievedValue,
-            expectedValueSize), "expected value (#%d) differs", i);
+            expectedValueSize), "expected value (#%ld) differs", i);
     }
 }
 
@@ -107,7 +107,7 @@ checkKV(const HashTable *ht, const void **expectedKeys,
         /* get record */
         kvIndex = getHashTable(ht, expectedKeys[i], expectedKeySizes[i]);
         ck_assert_msg(kvIndex >= 0,
-            "expected key (#%d) is not mapped to any value", i);
+            "expected key (#%ld) is not mapped to any value", i);
         /* get value */
         retrievedValue = getValueHashTable(ht, expectedKeys[i],
             expectedKeySizes[i]);
@@ -117,9 +117,9 @@ checkKV(const HashTable *ht, const void **expectedKeys,
         retrievedValueSize = sizeOfElementVLArray(ht->values, kvIndex);
         /* check if value matches the expected value */
         ck_assert_msg(expectedValueSizes[i] == retrievedValueSize,
-            "expected value size (#%d) differs", i);
+            "expected value size (#%ld) differs", i);
         ck_assert_msg(!memcmp(expectedValues[i], retrievedValue,
-            expectedValueSizes[i]), "expected value (#%d) differs", i);
+            expectedValueSizes[i]), "expected value (#%ld) differs", i);
     }
 }
 
@@ -130,8 +130,8 @@ insertHashTableStringConstLen()
 
     ht = spawnHashTable();
     for (size_t i = 0; i < LEN(testKeysConstLen); i++) {
-        ck_assert_msg(insertHashTable(ht, testKeysConstLen[i],
-            testKeyConstLenSizes[0], testValuesConstLen[i],
+        ck_assert_msg(insertHashTable(ht, (uint8_t *)testKeysConstLen[i],
+            testKeyConstLenSizes[0], (uint8_t *)testValuesConstLen[i],
             testKeyConstLenSizes[0]) >= 0,
             "insertHashTable failed with const len str key value: %s, %s",
             testKeysConstLen[i], testValuesConstLen[i]);
@@ -146,8 +146,8 @@ insertHashTableStringVarLen()
 
     ht = spawnHashTable();
     for (size_t i = 0; i < LEN(testKeysVarLen); i++) {
-        ck_assert_msg(insertHashTable(ht, testKeysVarLen[i],
-            testKeyVarLenSizes[i], testValuesVarLen[i], 
+        ck_assert_msg(insertHashTable(ht, (uint8_t *)testKeysVarLen[i],
+            testKeyVarLenSizes[i], (uint8_t *)testValuesVarLen[i], 
             testValueVarLenSizes[i]) >= 0,
             "insertHashTable failed with var len str key value: %s, %s",
             testKeysVarLen[i], testValuesVarLen[i]);
@@ -160,66 +160,14 @@ insertHashTableInt()
 {
     HashTable *ht;
 
-    size_t tmp;
-    uint32_t hash;
-
     ht = spawnHashTable();
     for (size_t i = 0; i < LEN(testKeysInt); i++) {
-        ck_assert_msg(insertHashTable(ht, testKeysInt[i], sizeof(int),
-            testValuesInt[i], sizeof(int)) >= 0,
+        ck_assert_msg(insertHashTable(ht, (uint8_t *)testKeysInt[i],
+            sizeof(int), (uint8_t *)testValuesInt[i], sizeof(int)) >= 0,
             "insertHashTable failed with int key value: %d, %d",
             *testKeysInt[i], *testValuesInt[i]);
-        hash = getHashHashTable(ht, i);
-        tmp = getBucketIDHashTable(ht, hash);
     }
     return ht;
-}
-
-/* XXX */
-
-static void
-testHashTableInsert(HashTable *ht, size_t n)
-{
-    size_t len;
-    char key[16];
-
-    for (size_t i = 0; i < n; i++) {
-        sprintf(key, "%u", i);
-        len = strlen(key) + 1;
-        // printf("Inserting (%s, %s)\n", key, key);
-        ck_assert_msg(insertHashTable(ht, key, len, key, len) >= 0,
-            "cannot insert (%s, %s) into hashtable", key, key);
-    }
-}
-
-static void
-testRetrieveValidKeys(HashTable *ht)
-{
-    const void *validKey;
-    const void *expectedValue;
-    const void *recordValue;
-    size_t recordValueSize;
-    size_t validKeySize;
-    size_t expectedValueSize;
-    int kvIndex;
-
-    for (size_t i = 0; i < getCountHashTable(ht); i++) {
-        /* fetch known KV */
-        validKey = getElementVLArray(ht->keys, i);
-        validKeySize = sizeOfElementVLArray(ht->keys, i);
-        expectedValue = getElementVLArray(ht->values, i);
-        expectedValueSize = sizeOfElementVLArray(ht->values, i);
-        /* fetch value using valid key */
-        kvIndex = getHashTable(ht, validKey, validKeySize);
-        ck_assert_msg(kvIndex >= 0, "got invalid kvIndex");
-        recordValue = getElementVLArray(ht->values, kvIndex);
-        recordValueSize = sizeOfElementVLArray(ht->values, kvIndex);
-        /* test fetched value against known value */
-        ck_assert_msg(recordValueSize == expectedValueSize,
-            "fetched value and known value sizes differ");
-        ck_assert_msg(!memcmp(recordValue, expectedValue, expectedValueSize),
-            "fetched value and known value differ");
-    }
 }
 
 START_TEST(testNewHashTable_NullCheck) 
@@ -293,8 +241,9 @@ START_TEST(testGetHashTable_StringConstLen)
     HashTable *ht;
 
     ht = insertHashTableStringConstLen();
-    checkKV(ht, testKeysConstLen, testKeyConstLenSizes, testValuesConstLen,
-        testKeyConstLenSizes, LEN(testKeysConstLen));
+    checkKV(ht, (const void **)testKeysConstLen, testKeyConstLenSizes,
+        (const void **)testValuesConstLen, testKeyConstLenSizes,
+        LEN(testKeysConstLen));
     deleteHashTable(ht);
 }
 END_TEST
@@ -304,8 +253,9 @@ START_TEST(testGetHashTable_StringVarLen)
     HashTable *ht;
 
     ht = insertHashTableStringVarLen();
-    checkKV(ht, testKeysVarLen, testKeyVarLenSizes, testValuesVarLen,
-        testValueVarLenSizes, LEN(testKeysVarLen));
+    checkKV(ht, (const void **)testKeysVarLen, testKeyVarLenSizes,
+        (const void **)testValuesVarLen, testValueVarLenSizes,
+        LEN(testKeysVarLen));
     deleteHashTable(ht);
 }
 END_TEST
@@ -315,8 +265,8 @@ START_TEST(testGetHashTable_Int)
     HashTable *ht;
 
     ht = insertHashTableInt();
-    checkKVConstKVSize(ht, testKeysInt, sizeof(int), testValuesInt,
-        sizeof(int), LEN(testKeysInt));
+    checkKVConstKVSize(ht, (const void **)testKeysInt, sizeof(int),
+        (const void **)testValuesInt, sizeof(int), LEN(testKeysInt));
     deleteHashTable(ht);
 }
 END_TEST
