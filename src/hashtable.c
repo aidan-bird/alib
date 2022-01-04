@@ -121,7 +121,8 @@ deleteHashTable(HashTable *ht)
  * EFFECTS
  * inserts a key value pair into the hash table.
  * may cause relocations (expensive).
- * returns non-zero on error.
+ * returns the kvIndex of the inserted key value pair.
+ * returns negative on error.
  */
 int
 insertHashTable(HashTable *ht, const uint8_t *key, size_t nKey,
@@ -165,9 +166,9 @@ insertHashTable(HashTable *ht, const uint8_t *key, size_t nKey,
     if (!(tryPushArray(&ht->hashes, &hash)))
         goto error1;
     ht->isDirty = 1;
-    return 0;
+    return kvIndex;
 error1:;
-    return 1;
+    return -1;
 }
 
 /*
