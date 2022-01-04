@@ -132,7 +132,7 @@ insertHashTableStringConstLen()
     for (size_t i = 0; i < LEN(testKeysConstLen); i++) {
         ck_assert_msg(insertHashTable(ht, testKeysConstLen[i],
             testKeyConstLenSizes[0], testValuesConstLen[i],
-            testKeyConstLenSizes[0]) == 0,
+            testKeyConstLenSizes[0]) >= 0,
             "insertHashTable failed with const len str key value: %s, %s",
             testKeysConstLen[i], testValuesConstLen[i]);
     }
@@ -148,7 +148,7 @@ insertHashTableStringVarLen()
     for (size_t i = 0; i < LEN(testKeysVarLen); i++) {
         ck_assert_msg(insertHashTable(ht, testKeysVarLen[i],
             testKeyVarLenSizes[i], testValuesVarLen[i], 
-            testValueVarLenSizes[i]) == 0,
+            testValueVarLenSizes[i]) >= 0,
             "insertHashTable failed with var len str key value: %s, %s",
             testKeysVarLen[i], testValuesVarLen[i]);
     }
@@ -166,7 +166,7 @@ insertHashTableInt()
     ht = spawnHashTable();
     for (size_t i = 0; i < LEN(testKeysInt); i++) {
         ck_assert_msg(insertHashTable(ht, testKeysInt[i], sizeof(int),
-            testValuesInt[i], sizeof(int)) == 0,
+            testValuesInt[i], sizeof(int)) >= 0,
             "insertHashTable failed with int key value: %d, %d",
             *testKeysInt[i], *testValuesInt[i]);
         hash = getHashHashTable(ht, i);
@@ -187,7 +187,7 @@ testHashTableInsert(HashTable *ht, size_t n)
         sprintf(key, "%u", i);
         len = strlen(key) + 1;
         // printf("Inserting (%s, %s)\n", key, key);
-        ck_assert_msg(insertHashTable(ht, key, len, key, len) == 0,
+        ck_assert_msg(insertHashTable(ht, key, len, key, len) >= 0,
             "cannot insert (%s, %s) into hashtable", key, key);
     }
 }
@@ -329,7 +329,6 @@ ht_suite()
 
     ret = suite_create("HashTable");
     tcCore = tcase_create("Core");
-    // tcase_add_test(tcCore, test_HashTable);
     tcase_add_test(tcCore, testNewHashTable_NullCheck);
     tcase_add_test(tcCore, testNewHashTable_CheckFields);
     tcase_add_test(tcCore, testInsertHashTable_stringConstLen);
@@ -338,10 +337,6 @@ ht_suite()
     tcase_add_test(tcCore, testGetHashTable_StringConstLen);
     tcase_add_test(tcCore, testGetHashTable_StringVarLen);
     tcase_add_test(tcCore, testGetHashTable_Int);
-// START_TEST(testDeleteHashTable)
-// START_TEST(testGrowHashTable)
-// START_TEST(testGetLoadFactor)
-// START_TEST (test_HashTable)
     suite_add_tcase(ret, tcCore);
     return ret;
 }

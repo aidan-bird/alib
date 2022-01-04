@@ -1,6 +1,8 @@
 #ifndef ALIB_STRING_BUILDER_H
 #define ALIB_STRING_BUILDER_H
 
+#include <stddef.h>
+
 typedef struct StringBuilder StringBuilder;
 
 StringBuilder *newStringBuilder();

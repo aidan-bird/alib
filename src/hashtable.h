@@ -36,17 +36,21 @@ uint32_t crc32(const uint8_t *data, size_t n);
 
 #define getCountHashTable(HASH_TABLE_PTR) \
     (getCountVLArray((HASH_TABLE_PTR)->keys))
-
 #define getBucketCountHashTable(HASH_TABLE_PTR) \
     (getCountArray((HASH_TABLE_PTR)->records))
-
 #define getBucketIDHashTable(HASH_TABLE_PTR, HASH) \
      ((HASH) % getBucketCountHashTable(HASH_TABLE_PTR))
-
 #define getBucketPtrFromBucketIDHashTable(HASH_TABLE_PTR, BUCKET_ID) \
     ((Array **)getElementArray((HASH_TABLE_PTR)->records, (BUCKET_ID)))
-
 #define getHashHashTable(HASH_TABLE_PTR, KV_INDEX) \
     (*(uint32_t *)getElementArray((HASH_TABLE_PTR)->hashes, (KV_INDEX)))
+#define getValueByKVIndexHashTable(HASH_TABLE_PTR, KV_INDEX) \
+    (getElementVLArray((HASH_TABLE_PTR)->values, (KV_INDEX)))
+#define getSizeofValueHashTable(HASH_TABLE_PTR, KV_INDEX) \
+    (sizeOfElementVLArray((HASH_TABLE_PTR)->values, (KV_INDEX)))
+#define getKeyHashTable(HASH_TABLE_PTR, KV_INDEX) \
+    (getElementVLArray((HASH_TABLE_PTR)->keys, (KV_INDEX)))
+#define getSizeofKeyHashTable(HASH_TABLE_PTR, KV_INDEX) \
+    (sizeOfElementVLArray((HASH_TABLE_PTR)->keys, (KV_INDEX)))
 
 #endif
