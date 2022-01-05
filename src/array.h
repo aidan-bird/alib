@@ -34,6 +34,7 @@ Array *tryPushArray(Array **array, const void *element);
 Array *insertArray(Array *array, const void *element, size_t index);
 Array *growArray(Array *array, size_t n);
 Array *forwardShiftRangeArray(Array *array, size_t index, size_t n);
+int compareArray(const Array *array1, const Array *array2);
 
 /* TODO have a function that removes a continuous range of elements */ 
 

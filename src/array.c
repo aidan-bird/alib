@@ -528,3 +528,30 @@ arrayToRaw(Array *array, size_t n)
     n = n > sizeofArray(array) ? sizeofArray(array) : n;
     memmove(array, array->first, n);
 }
+
+/*
+ * EFFECTS
+ * returns non-zero if the arrays differ.
+ */
+int
+compareArray(const Array *array1, const Array *array2)
+{
+    /* check if array ptrs are the same */
+    if (array1 == array2)
+        return 0;
+    /* compare fields */
+    if (array1->blockSize != array2->blockSize
+        || array1->elementSize != array2->elementSize
+        // || array1->capacity != array2->capacity
+        || array1->count != array2->count) {
+        return -1;
+    }
+    /* compare contents */
+    for (size_t i = 0; i < getCountArray(array1); i++) {
+        if (memcmp(getElementArray(array1, i), getElementArray(array2, i),
+            array1->elementSize)) {
+            return -1;
+        }
+    }
+    return 0;
+}
