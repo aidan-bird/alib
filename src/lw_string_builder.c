@@ -1,4 +1,3 @@
-// #ifdef debug
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
@@ -325,5 +324,3 @@ LWStringBuilderPrintInplace(const LWStringBuilder *sb)
         }
     }
 }
-
-// #endif

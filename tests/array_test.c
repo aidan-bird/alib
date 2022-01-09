@@ -7,6 +7,18 @@
  * TODO test with large types.
  */
 
+/*
+ * TODO functions that need to be tested
+ * int removeRangeArray(Array *array, void *outElements, const size_t *range,
+ * size_t n);
+ * int removeContinuousRangeArray(Array *array, void *outElements, size_t index,
+ * size_t n);
+ * Array *expandArray(Array *array, size_t blockCount);
+ * Array *insertArray(Array *array, const void *element, size_t index);
+ * Array *growArray(Array *array, size_t n);
+ * Array *forwardShiftRangeArray(Array *array, size_t index, size_t n);
+ */
+
 static const int testingData1[] = { -2, -1, 0, 1, 2, 3, 4, 5 };
 static const int testingData1a[] = { -1, 0, 1, 2, 3, 4, 5 };
 static const int testingData1b[] = { -1, 0, 1, 2, 3, 4 };
@@ -73,6 +85,45 @@ newArrayWithChars(const char *str)
         i++;
     } while(*(str++));
     return ret;
+}
+
+static void
+_containsIndexArray(const Array *array, size_t index)
+{
+    int ret;
+
+    ret = containsIndexArray(array, index);
+    ck_assert_msg(!ret, "index (%ld) is not in array", index);
+}
+
+static int
+_removeAtArray(Array *array, void *outElement, size_t index)
+{
+    int ret;
+    char tmp1[array->elementSize];
+    char tmp2[array->elementSize];
+
+    _containsIndexArray(array, index);
+    memcpy(tmp1, getElementArray(array, index), array->elementSize);
+    ret = removeAtArray(array, tmp2, index);
+    ck_assert_msg(!memcmp(tmp1, tmp2, array->elementSize),
+        "outElement mismatch (index %ld)", index);
+    if (outElement)
+        memcpy(outElement, tmp1, array->elementSize);
+    return ret;
+}
+
+static int
+_compareArrayWithInts(const Array *arr, const int *ints, size_t n)
+{
+    size_t j;
+
+    j = MIN(n, arr->count);
+    for (size_t i = 0; i < j; i++) {
+        ck_assert_msg(!memcmp(getElementArray(arr, i), ints + i, sizeof(int)),
+            "array values do not match expected values");
+    }
+    return 0;
 }
 
 START_TEST (test_newArray_sizes)
@@ -264,46 +315,6 @@ START_TEST (test_array_search_fail)
     deleteArray(arr);
 }
 END_TEST
-
-
-static int
-_containsIndexArray(const Array *array, size_t index)
-{
-    int ret;
-
-    ret = containsIndexArray(array, index);
-    ck_assert_msg(!ret, "index (%ld) is not in array", index);
-    return ret;
-}
-
-static int
-_removeAtArray(Array *array, void *outElement, size_t index)
-{
-    int ret;
-    char tmp1[array->elementSize];
-    char tmp2[array->elementSize];
-
-    _containsIndexArray(array, index);
-    memcpy(tmp1, getElementArray(array, index), array->elementSize);
-    ret = removeAtArray(array, tmp2, index);
-    ck_assert_msg(!memcmp(tmp1, tmp2, array->elementSize),
-        "outElement mismatch (index %ld)", index);
-    if (outElement)
-        memcpy(outElement, tmp1, array->elementSize);
-    return ret;
-}
-
-static int
-_compareArrayWithInts(const Array *arr, const int *ints, size_t n)
-{
-    size_t j;
-
-    j = MIN(n, arr->count);
-    for (size_t i = 0; i < j; i++) {
-        ck_assert_msg(!memcmp(getElementArray(arr, i), ints + i, sizeof(int)),
-            "array values do not match expected values");
-    }
-}
 
 START_TEST (test_array_remove_at)
 {
