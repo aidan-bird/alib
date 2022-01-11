@@ -11,6 +11,9 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#define ARRAY_DEFAULT_CAPACITY 32
+#define ARRAY_DEFAULT_BLOCK_SIZE 32
+
 typedef struct Array Array;
 typedef Array * (*ArrayRelocateFunc)();
 

@@ -25,15 +25,26 @@ static const int testingData1b[] = { -1, 0, 1, 2, 3, 4 };
 static const int testingData1c[] = { -1, 0, 1, 3, 4 };
 static const char *testingStr1 = "My god it's full of mail!";
 
+
 static Array *
-_newArray(size_t elementSize)
+_newArrayCapacityAndBlockSize(int blocksize, int capacity, size_t elementSize)
 {
     Array *ret;
 
-    /* new array with defaults */
-    ck_assert_msg((ret = newArray(-1, -1, elementSize)) != NULL,
-        "newretay() failed");
+    ck_assert_msg((ret = newArray(blocksize, capacity, elementSize)) != NULL,
+        "newArray() failed");
+    /* check fields */
+    ck_assert_msg(ret->blockSize == (blocksize < 0 ? ARRAY_DEFAULT_BLOCK_SIZE 
+        : blocksize), "blocksize mismatch");
+    ck_assert_msg(ret->capacity == (capacity < 0 ? ARRAY_DEFAULT_CAPACITY
+        : capacity), "capacity mismatch");
     return ret;
+}
+
+static Array *
+_newArray(size_t elementSize)
+{
+    return _newArrayCapacityAndBlockSize(-1, -1, elementSize);
 }
 
 static Array *
@@ -124,6 +135,21 @@ _compareArrayWithInts(const Array *arr, const int *ints, size_t n)
             "array values do not match expected values");
     }
     return 0;
+}
+
+START_TEST (test_newArray_default_capacity)
+{
+    deleteArray(_newArrayCapacityAndBlockSize(10, -1, sizeof(int)));
+}
+
+START_TEST (test_newArray_default_block_size)
+{
+    deleteArray(_newArrayCapacityAndBlockSize(-1, 10, sizeof(int)));
+}
+
+START_TEST (test_newArray_default_block_size_and_capacity)
+{
+    deleteArray(_newArrayCapacityAndBlockSize(-1, -1, sizeof(int)));
 }
 
 START_TEST (test_newArray_sizes)
@@ -342,6 +368,9 @@ array_suite(void)
 
     s = suite_create("Array");
     tc_core = tcase_create("Core");
+    tcase_add_test(tc_core, test_newArray_default_block_size);
+    tcase_add_test(tc_core, test_newArray_default_capacity);
+    tcase_add_test(tc_core, test_newArray_default_block_size_and_capacity);
     tcase_add_test(tc_core, test_newArray_sizes);
     tcase_add_test(tc_core, test_array_insert);
     tcase_add_test(tc_core, test_array_compare);
