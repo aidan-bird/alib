@@ -6,9 +6,6 @@
 #include "vlarray.h"
 #include "utils.h"
 
-#define VLARRAY_DEFAULT_FRAME_SIZE 64
-#define VLARRAY_DEFAULT_CAPACITY_SIZE 32
-
 #define arrayFunc(ARRAY_PTR, ARRAY_FUNC, ERROR_LABEL) \
 { \
     Array *arrayfunc_tmp_; \
@@ -18,12 +15,6 @@
 }
 
 /*
- * REQUIRES
- * none
- *
- * MODIFIES
- * none
- *
  * EFFECTS
  * constructs a new VLArray.
  *
@@ -41,14 +32,13 @@ newVLArray(int blockSize, int capacity, int frameSize)
 
     frameSize = frameSize <= 0 ? VLARRAY_DEFAULT_FRAME_SIZE : frameSize;
     capacity = capacity <= 0 ? VLARRAY_DEFAULT_CAPACITY_SIZE : capacity;
+    blockSize = blockSize <= 0 ? VLARRAY_DEFAULT_BLOCK_SIZE : blockSize;
     if (!(ret = malloc(sizeof(VLArray))))
         goto error1;
     if (!(ret->offsets = newArray(blockSize, capacity, sizeof(int))))
         goto error2;
-    if (!(ret->data = newArray(!blockSize ? -1 : blockSize, capacity, 
-        frameSize))) {
+    if (!(ret->data = newArray(blockSize, capacity, frameSize)))
         goto error3;
-    }
     if (!(ret->sizes = newArray(blockSize, capacity, sizeof(size_t))))
         goto error4;
     ret->isDirty = 1;
@@ -64,15 +54,11 @@ error1:;
 }
 
 /*
- * REQUIRES
- * arr is valid
- *
  * MODIFIES
  * arr
  *
  * EFFECTS
  * delets arr
- *
  */
 void
 deleteVLArray(VLArray *arr)
@@ -84,22 +70,16 @@ deleteVLArray(VLArray *arr)
 }
 
 /*
- * REQUIRES
- * arr is valid
- *
  * MODIFIES
  * arr
  *
  * EFFECTS
- * push an element to the end of the array.
- *
- * if nextElement is NULL, this will only reserve space.
- *
- * takes O(n) time.
- *
- * returns null on error.
- *
- * returns a pointer to the arr. all uses of arr should be done using the 
+ * Push an element to the end of the array.
+ * If nextElement is NULL, this will only reserve space.
+ * Takes O(n) time.
+ * arr may be automatically resized (expensive).
+ * Returns null on error.
+ * Returns a pointer to the arr. all uses of arr should be done using the 
  * return value.
  */
 VLArray *
@@ -108,7 +88,16 @@ pushVLArray(VLArray *arr, const void *nextElement, size_t elementSize)
     return insertVLArray(arr, nextElement, elementSize, arr->offsets->count);
 }
 
-/* XXX experimental */
+/*
+ * MODIFIES
+ * arr and *arr
+ *
+ * EFFECTS
+ * Pushes an element onto arr, and if successful, replace the arr
+ * pointer with a new pointer returned by pushVLArray().
+ * arr may be automatically resized (expensive).
+ * Returns NULL on error.
+ */
 VLArray *
 tryPushVLArray(VLArray **arr, const void *nextElement, size_t elementSize)
 {
@@ -123,17 +112,18 @@ tryPushVLArray(VLArray **arr, const void *nextElement, size_t elementSize)
 
 /*
  * REQUIRES
- * arr is valid
+ * index is valid
  *
  * MODIFIES
  * arr
  *
  * EFFECTS
- * insert an element into array at index
- *
- * see pushVLArray for errors
- *
- * takes O(n) time
+ * Insert an element into array at index.
+ * Takes O(n) time.
+ * arr may be automatically resized (expensive).
+ * Returns a pointer to the arr. all uses of arr should be done using the 
+ * return value.
+ * Returns NULL on error.
  */
 VLArray *
 insertVLArray(VLArray *arr, const void *nextElement, size_t elementSize,
@@ -202,10 +192,17 @@ error1:;
 }
 
 /*
- * remove an element at index
+ * REQUIRES
+ * index is valid
  *
- * takes O(n) time
- */ 
+ * MODIFIES
+ * arr
+ *
+ * EFFECTS
+ * Remove an element at index.
+ * Takes O(n) time.
+ * Returns non-zero on error.
+ */
 int
 removeAtVLArray(VLArray *arr, void *outElement, size_t index)
 {
@@ -240,10 +237,18 @@ removeAtVLArray(VLArray *arr, void *outElement, size_t index)
 }
 
 /*
- * remove the last element in the array 
+ * REQUIRES
+ * If outElement is not NULL, then it must point to a buffer that can store the
+ * element at index
  *
- * takes O(n) time
- */ 
+ * MODIFIES
+ * arr
+ *
+ * EFFECTS
+ * Remove the last element in the array.
+ * Takes O(n) time.
+ * If outElement is not NULL, the removed element is written to outElement.
+ */
 int
 popVLArray(VLArray *arr, void *outElement)
 {
@@ -251,10 +256,13 @@ popVLArray(VLArray *arr, void *outElement)
 }
 
 /*
- * remove all elements in the array 
+ * MODIFIES
+ * arr
  *
- * takes O(1) time
- */ 
+ * EFFECTS
+ * Remove all elements in the array.
+ * Takes O(1) time.
+ */
 void
 clearVLArray(VLArray *arr)
 {
@@ -264,6 +272,13 @@ clearVLArray(VLArray *arr)
     arr->isDirty = 1;
 }
 
+/*
+ * MODIFIES
+ * stdout
+ *
+ * EFFECTS
+ * prints all the elements in arr as strings.
+ */
 void
 printVLArray(const VLArray *arr)
 {
@@ -288,6 +303,10 @@ makeCleanVLArray(VLArray *arr)
     arr->isDirty = 0;
 }
 
+/*
+ * EFFECTS
+ * returns the sum of the sizes of all the elements in arr.
+ */
 size_t
 getSizeVLArray(VLArray *arr)
 {
@@ -295,6 +314,17 @@ getSizeVLArray(VLArray *arr)
     return arr->totalSize;
 }
 
+/*
+ * REQUIRES
+ * The elements in arr are NULL terminated strings.
+ *
+ * MODIFIES
+ * arr
+ *
+ * EFFECTS
+ * Returns a string that is the concatenation of all the elements in arr.
+ * Returns NULL on error.
+ */
 char *
 toStringVLArray(VLArray *arr)
 {

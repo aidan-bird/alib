@@ -12,6 +12,10 @@
 
 #include "array.h"
 
+#define VLARRAY_DEFAULT_FRAME_SIZE 64
+#define VLARRAY_DEFAULT_CAPACITY_SIZE 32
+#define VLARRAY_DEFAULT_BLOCK_SIZE ARRAY_DEFAULT_BLOCK_SIZE
+
 #define getElementVLArray(VLARRAY_PTR, INDEX) \
     (getElementArray((VLARRAY_PTR)->data, \
     (*((int *)getElementArray((VLARRAY_PTR)->offsets, INDEX)))))
@@ -29,6 +33,8 @@
 #define peekVLArray(VLARRAY_PTR) \
     (getElementVLArray(VLARRAY_PTR, (lastIndexVLArray(VLARRAY_PTR))))
 #define getCapacityVLArray(VLARRAY_PTR) ((VLARRAY_PTR)->offsets->capacity)
+#define getBlockSizeVLArray(VLARRAY_PTR) ((VLARRAY_PTR)->offsets->blockSize)
+#define getFrameSizeVLArray(VLARRAY_PTR) ((VLARRAY_PTR)->data->elementSize)
 
 typedef struct VLArray VLArray;
 

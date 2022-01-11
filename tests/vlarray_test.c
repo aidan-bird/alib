@@ -33,13 +33,26 @@ setupTestingData()
 }
 
 static VLArray *
-_newVLArray()
+_newVLArrayParams(int blockSize, int capacity, int frameSize)
 {
     VLArray *ret;
 
-    ret = newVLArray(-1, -1, -1);
+    ret = newVLArray(blockSize, capacity, frameSize);
     ck_assert_msg(ret != NULL, "newVLArray() failed");
+    /* check fields */
+    ck_assert_msg(getBlockSizeVLArray(ret) == (blockSize < 0 ?
+        VLARRAY_DEFAULT_BLOCK_SIZE : blockSize), "blocksize mismatch");
+    ck_assert_msg(getCapacityVLArray(ret) == (capacity < 0 ?
+        VLARRAY_DEFAULT_CAPACITY_SIZE : capacity), "capacity mismatch");
+    ck_assert_msg(getFrameSizeVLArray(ret) == (frameSize < 0 ?
+        VLARRAY_DEFAULT_FRAME_SIZE : frameSize), "frame size mismatch");
     return ret;
+}
+
+static VLArray *
+_newVLArray()
+{
+    return _newVLArrayParams(-1, -1, -1);
 }
 
 static VLArray *
@@ -87,7 +100,14 @@ _popVLArray(VLArray *arr, void *outElement)
 
 START_TEST (test_vlarray_new)
 {
-    deleteVLArray(_newVLArray());
+    const int blockSizes[] = { 10, -1, 10, -1, 10, -1, 10, -1 };
+    const int capacities[] = { 10, 10, -1, -1, 10, 10, -1, -1 };
+    const int frameSizes[] = { 10, 10, 10, 10, -1, -1, -1, -1 };
+
+    for (size_t i = 0; i < LEN(blockSizes); i++) {
+        deleteVLArray(_newVLArrayParams(blockSizes[i], capacities[i],
+            frameSizes[i]));
+    }
 }
 END_TEST
 
