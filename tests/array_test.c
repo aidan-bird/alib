@@ -1,5 +1,7 @@
 #include <stdlib.h>
 #include <check.h>
+#include <stdint.h>
+
 #include "../src/array.h"
 #include "../src/utils.h"
 
@@ -23,8 +25,17 @@ static const int testingData1[] = { -2, -1, 0, 1, 2, 3, 4, 5 };
 static const int testingData1a[] = { -1, 0, 1, 2, 3, 4, 5 };
 static const int testingData1b[] = { -1, 0, 1, 2, 3, 4 };
 static const int testingData1c[] = { -1, 0, 1, 3, 4 };
-static const char *testingStr1 = "My god it's full of mail!";
+static const int testingDataRemoveRangeExpected[] = { -1, 1, 3, 5 };
+static const char *testingStr1 = "My god it's full of email!";
 
+static Array *
+_cloneArray(Array *arr)
+{
+    Array *ret;
+
+    ck_assert_msg((ret = cloneArray(arr)) != NULL, "cloneArray() failed");
+    return ret;
+}
 
 static Array *
 _newArrayCapacityAndBlockSize(int blocksize, int capacity, size_t elementSize)
@@ -137,6 +148,40 @@ _compareArrayWithInts(const Array *arr, const int *ints, size_t n)
     return 0;
 }
 
+static int
+_removeRangeArray(Array *array, void *outElements, const size_t *range,
+    size_t n)
+{
+    int ret;
+    Array *copy;
+    uint8_t tmpOutElements[getElementSizeArray(array) * n];
+    int expected;
+    int got;
+    size_t nCopy;
+
+    copy = _cloneArray(array);
+    ret = removeRangeArray(array, tmpOutElements, range, n);
+    /* check tmpOutElements */
+    for (size_t i = 0; i < n; i++) {
+        expected = *(int *)getElementArray(copy, range[i]);
+        got = ((int *)tmpOutElements)[i];
+        ck_assert_msg(expected == got,
+            "outElements mismatch. expected %d, got %d", expected, got);
+    }
+    /* copy tmpOutElements to outElements */
+    if (outElements) {
+        nCopy = sizeofArray(copy);
+        arrayToRaw(copy, nCopy);
+        memcpy(outElements, copy, nCopy);
+        free(copy);
+    } else {
+        deleteArray(copy);
+    }
+    return ret;
+}
+
+/* testing newArray */
+
 START_TEST (test_newArray_default_capacity)
 {
     deleteArray(_newArrayCapacityAndBlockSize(10, -1, sizeof(int)));
@@ -171,6 +216,8 @@ START_TEST (test_newArray_sizes)
 }
 END_TEST
 
+/* test insertArray */
+
 START_TEST (test_array_insert)
 {
     Array *arr;
@@ -188,7 +235,7 @@ START_TEST (test_array_insert)
 }
 END_TEST
 
-START_TEST (test_array_compare)
+START_TEST (test_array_clone)
 {
     Array *arr;
     Array *clone;
@@ -196,7 +243,7 @@ START_TEST (test_array_compare)
 
     arr = newArrayWithInt(testingData1, LEN(testingData1));
     /* make clone */
-    ck_assert_msg((clone = cloneArray(arr)) != NULL, "cloneArray() failed");
+    clone = _cloneArray(arr);
     /* check that the clone is valid */
     for (size_t i = 0; i < getCountArray(arr); i++) {
         got = *(int *)getElementArray(arr, i);
@@ -208,14 +255,14 @@ START_TEST (test_array_compare)
     deleteArray(clone);
 }
 
-START_TEST (test_array_clone)
+START_TEST (test_array_compare)
 {
     Array *arr;
     Array *clone;
 
     arr = newArrayWithInt(testingData1, LEN(testingData1));
     /* make clone */
-    ck_assert_msg((clone = cloneArray(arr)) != NULL, "cloneArray() failed");
+    clone = _cloneArray(arr);
     /* check that the clone is valid */
     ck_assert_msg((!compareArray(arr, clone)) && (arr != clone),
         "clone is not valid");
@@ -359,6 +406,42 @@ START_TEST (test_array_remove_at)
     deleteArray(arr);
 }
 END_TEST
+
+START_TEST (test_array_remove_range)
+{
+    const size_t range[] = { 0, 2, 4, 6 };
+    Array *arr;
+ 
+    arr = newArrayWithInt(testingData1, LEN(testingData1));
+    _removeRangeArray(arr, NULL, range, LEN(range));
+    deleteArray(arr);
+}
+END_TEST
+
+START_TEST (test_array_remove_range_first)
+{
+    const size_t range[] = { 0 };
+    Array *arr;
+ 
+    arr = newArrayWithInt(testingData1, LEN(testingData1));
+    _removeRangeArray(arr, NULL, range, 1);
+    deleteArray(arr);
+}
+END_TEST
+
+START_TEST (test_array_remove_range_empty)
+{
+    // const size_t range[0] = { };
+    // int outElements[0];
+    // Array *arr;
+ 
+    // arr = newArrayWithInt(testingData1, LEN(testingData1));
+    // removeRangeArray(arr, outElements, range, 0);
+    // deleteArray(arr);
+}
+END_TEST
+
+
 
 Suite *
 array_suite(void)

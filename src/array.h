@@ -53,6 +53,7 @@ int compareArray(const Array *array1, const Array *array2);
 #define isIndexValidArray(ARRAY_PTR, INDEX) \
     ((INDEX) >= 0 && (INDEX) < (ARRAY_PTR)->count)
 #define getCapacityArray(ARRAY_PTR) ((ARRAY_PTR)->capacity)
+#define getElementSizeArray(ARRAY_PTR) ((ARRAY_PTR)->elementSize)
 
 /*
  * ARRAY DETAILS AND FIELDS
