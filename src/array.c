@@ -8,24 +8,6 @@
 
 #define MAXWORD uint64_t
 
-/*
- * EFFECTS
- * Constructs a new array.
- *
- * blockSize = the number of elements that will be added to the capacity when 
- * the array is resized.
- *
- * elementSize = the actual size of each element in bytes.
- *
- * capacity = the number of elements that can be added before the array is 
- * automatically resized.
- *
- * If capacity < 0, then the default capacity is used.
- * If blockSize < 0, then the default blockSize is used.
- * If blockSize = 0, then the array cannot be resized.
- *
- * Returns null on error.
- */
 Array *
 newArray(int blockSize, int capacity, size_t elementSize)
 {
@@ -50,18 +32,6 @@ newArray(int blockSize, int capacity, size_t elementSize)
     return ret;
 }
 
-/*
- * MODIFIES
- * array
- *
- * EFFECTS
- * Increase the capacity of an Array by (Array.blockSize * blockCount).
- * On success, this returns a pointer to the resized array. This value may 
- * differ from the array point argument, so the array pointer argument is not
- * valid after a successful call to this function.
- * Returns NULL on error.
- * Does nothing if either blockCount or blockSize are zero.
- */
 Array *
 expandArray(Array *array, size_t blockCount)
 {
@@ -81,33 +51,12 @@ expandArray(Array *array, size_t blockCount)
     return ret;
 }
 
-/*
- * MODIFIES
- * array
- *
- * EFFECTS
- * Append an element to an Array object. 
- * The array may be automatically resized (expensive).
- * Pushing elements takes O(1) if there is enough capacity, and O(n) otherwise.
- * Returns NULL on error.
- * If successful, the array parameter is invalid and all uses of the array
- * are to be done using the return value.
- */
 Array *
 pushArray(Array *array, const void *element)
 {
     return insertArray(array, element, array->count);
 }
 
-/*
- * MODIFIES
- * array and *array
- *
- * EFFECTS
- * Pushes an element onto the array, and if successful, replace the array
- * pointer with a new pointer returned by pushArray().
- * Returns NULL on error.
- */
 Array *
 tryPushArray(Array **array, const void *element)
 {
@@ -120,92 +69,30 @@ tryPushArray(Array **array, const void *element)
     return tmp;
 }
 
-/*
- * REQUIRES
- * Index is valid.
- * If outElement is not null, it should point to a buffer that is at least 
- * elementSize bytes long.
- *
- * MODIFIES
- * array
- * outElement
- *
- * EFFECTS
- * Remove the element at a specified index.
- * If outElement is not NULL, the removed element will be copied to outElement.
- * Takes O(1) time if index = array.count - 1 i.e., pop operation.
- * Takes O(n) time otherwise.
- * Returns non-zero on error.
- */
 int 
 removeAtArray(Array *array, void *outElement, size_t index)
 {
     return removeContinuousRangeArray(array, outElement, index, 1);
 }
 
-/*
- * REQUIRES
- * If outElement is not null, it should point to a buffer that is at least 
- * elementSize bytes long.
- *
- * MODIFIES
- * array
- * outElement
- *
- * EFFECTS
- * Remove the last element from the array.
- * If outElement is not NULL, the removed element will be copied to outElement.
- * Takes O(1) time.
- * Returns non-zero on error.
- */
 int
 popArray(Array *array, void *outElement)
 {
     return removeAtArray(array, outElement, array->count - 1);
 }
 
-/*
- * MODIFIES
- * array
- *
- * EFFECTS
- * Remove all elements from the array
- * This does not change the array capacity.
- * Takes O(1) time.
- */
 void
 clearArray(Array *array)
 {
     array->count = 0;
 }
 
-/*
- * MODIFIES
- * array
- *
- * EFFECTS
- * frees array
- */
 void
 deleteArray(Array *array)
 {
     free(array);
 }
 
-/*
- * MODIFIES
- * outStr
- *
- * EFFECTS
- * Interprets the array contents as a null-terminated string.
- * The array must contain a null terminator.
- * Converts the array into a null-terminated string, and returns the length of 
- *  the string.
- * Sets the outStr pointer to point to the string.
- * The array pointer argument and the array itself is not valid after the 
- * function ends.
- * takes O(n) time
- */
 size_t
 arrayToString(Array *array, char **outStr)
 {
@@ -219,12 +106,6 @@ arrayToString(Array *array, char **outStr)
     return ret;
 }
 
-/*
- * EFFECTS
- * Make a copy of an array.
- * The capacity will be set to the number of elements in the array.
- * takes O(n) time
- */
 Array *
 cloneArray(const Array *array)
 {
@@ -240,10 +121,6 @@ cloneArray(const Array *array)
     return ret;
 }
 
-/*
- * EFFECTS
- * Returns non-zero if index cannot be used to index into array.
- */
 int
 containsIndexArray(const Array *array, size_t index)
 {
@@ -258,18 +135,6 @@ sortCmpFunc(const void *a, const void *b)
    return *(size_t*)a - *(size_t*)b;
 }
 
-/*
- * MODIFIES
- * array
- * outElements
- *
- * EFFECTS
- * Remove multiple elements specified by a sequence of indexes from an array.
- * If outElements is not NULL, the removed elements will be copied to 
- * outElements.
- * n is the number of elements to be removed.
- * The range sequence must contain no duplicates.
- */
 int
 removeRangeArray(Array *array, void *outElements, const size_t *range,
     size_t n)
@@ -305,14 +170,6 @@ removeRangeArray(Array *array, void *outElements, const size_t *range,
     return 0;
 }
 
-/*
- * EFFECTS
- * Do a linear search from low to high indexes.
- * Return the index of the first elements that matches element.
- * Element must be the same type and size as the elements in the array.
- * Returns negative if no matches are found.
- * Takes O(n) time.
- */
 int
 searchArray(const Array *array, const void *restrict element)
 {
@@ -337,18 +194,6 @@ searchArray(const Array *array, const void *restrict element)
     return -1;
 }
 
-/*
- * MODIFIES
- * array
- *
- * EFFECTS
- * Make space for n more elements.
- * Resizes the array if needed (expensive).
- * Returns NULL on error.
- * Takes O(n) if the array is resized. 
- * If successful, the array parameter is invalid and all uses of the array
- * are to be done using the return value.
- */
 Array *
 growArray(Array *array, size_t n)
 {
@@ -359,22 +204,6 @@ growArray(Array *array, size_t n)
     return array;
 }
 
-/*
- * REQUIRES
- * index is valid
- *
- * MODIFIES
- * array
- *
- * EFFECTS
- * Insert an element in the array at index.
- * If element is null, an empty element is inserted.
- * Returns NULL on error, and the array data is left untouched.
- * Takes O(n) time if index < array.count - 1 i.e., non-push insertion.
- * appending elements takes O(1) if there is enough capacity.
- * If successful, the array parameter is invalid and all uses of the array
- * are to be done using the return value.
- */
 Array *
 insertArray(Array *array, const void *element, size_t index)
 {
@@ -412,20 +241,6 @@ insertArray(Array *array, const void *element, size_t index)
     return array;
 }
 
-/*
- * REQUIRES
- * index is valid
- *
- * MODIFIES
- * array
- *
- * EFFECTS
- * Make space for n elements at index by shifting elements forward.
- * Returns NULL on error.
- * Takes O(n) time.
- * If successful, the array parameter is invalid and all uses of the array
- * are to be done using the return value.
- */
 Array *
 forwardShiftRangeArray(Array *array, size_t index, size_t n)
 {
@@ -446,17 +261,6 @@ forwardShiftRangeArray(Array *array, size_t index, size_t n)
     return array;
 }
 
-/*
- * MODIFIES
- * array
- *
- * EFFECTS
- * Remove a continuous range of n elements.
- * Returns non-zero on error e.g., array is empty, n is zero, index + n out 
- * of bounds.
- * This takes O(n) time for non-pop operations.
- * Pop operations take O(1) time.
- */
 int
 removeContinuousRangeArray(Array *array, void *outElements, size_t index,
     size_t n)
@@ -481,14 +285,6 @@ removeContinuousRangeArray(Array *array, void *outElements, size_t index,
     return 0;
 }
 
-/*
- * MODIFIES
- * array
- *
- * EFFECTS
- * Converts array into a raw sequence of n elements.
- * The array cannot be used in array functions & macros after this function.
- */
 void
 arrayToRaw(Array *array, size_t n)
 {
@@ -496,10 +292,6 @@ arrayToRaw(Array *array, size_t n)
     memmove(array, array->first, n);
 }
 
-/*
- * EFFECTS
- * Returns non-zero if the arrays differ.
- */
 int
 compareArray(const Array *array1, const Array *array2)
 {
