@@ -2,7 +2,7 @@
 #define ALIB_ARRAY_H
 
 /*
- * Aidan Bird 2021
+ * Aidan Bird 2023
  * 
  * Really simple dynamically sized array.
  *
